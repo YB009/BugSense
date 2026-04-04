@@ -9,5 +9,9 @@ export class ProjectsController {
   getHealth() {
     return this.projectsService.getHealth();
   }
-}
 
+  @Get('transport/health')
+  async getTransportHealth() {
+    return this.projectsService.getTransportHealth();
+  }
+}

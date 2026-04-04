@@ -5,5 +5,16 @@ dist
 coverage
 .env
 .env.local
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.secret
+secrets/
+.vercel
+.railway
 pnpm-lock.yaml
-

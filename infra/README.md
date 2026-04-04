@@ -7,11 +7,13 @@ Infrastructure assets for local development live here.
 Files:
 
 - `docker-compose.yml`: local ClickHouse service definition
+- `.env.example`: example local environment variables for Docker Compose
 - `clickhouse/initdb/001-error-events.sql`: initial `error_events` schema
 
 Run locally:
 
 ```bash
+cp infra/.env.example infra/.env
 docker compose -f infra/docker-compose.yml up -d
 ```
 

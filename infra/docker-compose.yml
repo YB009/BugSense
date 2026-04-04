@@ -3,13 +3,15 @@ services:
     image: clickhouse/clickhouse-server:25.3
     container_name: bugsense-clickhouse
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "8123:8123"
       - "9000:9000"
     environment:
-      CLICKHOUSE_DB: bugsense
-      CLICKHOUSE_USER: bugsense
-      CLICKHOUSE_PASSWORD: bugsense
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
@@ -22,9 +24,9 @@ services:
           "--host",
           "127.0.0.1",
           "--user",
-          "bugsense",
+          "${CLICKHOUSE_USER}",
           "--password",
-          "bugsense",
+          "${CLICKHOUSE_PASSWORD}",
           "--query",
           "SELECT 1"
         ]

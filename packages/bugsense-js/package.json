@@ -1,0 +1,54 @@
+{
+  "name": "@bugsense/bugsense-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BugSense JavaScript SDK for browser and Node error capture.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/integrations/react.d.ts",
+      "import": "./dist/integrations/react.js",
+      "require": "./dist/integrations/react.cjs"
+    },
+    "./node": {
+      "types": "./dist/integrations/node.d.ts",
+      "import": "./dist/integrations/node.js",
+      "require": "./dist/integrations/node.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "tsc --project tsconfig.json --noEmit",
+    "test": "node -e \"console.log('No tests yet for @bugsense/bugsense-js')\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@bugsense/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsup": "^8.3.5"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}
+

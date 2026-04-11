@@ -1,6 +1,17 @@
 {
   "name": "@bugsense/config",
   "version": "0.1.0",
-  "private": true
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch",
+    "lint": "tsc --project tsconfig.json --noEmit",
+    "test": "node -e \"console.log('No tests yet for @bugsense/config')\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10"
+  }
 }
-

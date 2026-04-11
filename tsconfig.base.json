@@ -11,11 +11,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@bugsense/types": ["packages/types/src"],
-      "@bugsense/config/*": ["packages/config/*"]
-    }
+    "baseUrl": "."
   }
 }
-

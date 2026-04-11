@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
-import { TRANSPORT_PATTERNS } from '@bugsense/types';
+import { IngestEventRequest, TRANSPORT_PATTERNS } from '@bugsense/types';
 import { EventsService } from './events.service';
 
 @Controller('events')
@@ -15,5 +15,10 @@ export class EventsController {
   @MessagePattern(TRANSPORT_PATTERNS.INGESTION_HEALTH)
   async getTransportHealth() {
     return this.eventsService.getTransportHealth();
+  }
+
+  @MessagePattern(TRANSPORT_PATTERNS.INGEST_EVENT)
+  async ingestEvent(payload: IngestEventRequest) {
+    return this.eventsService.ingestEvent(payload);
   }
 }

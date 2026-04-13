@@ -18,3 +18,4 @@ secrets/
 .vercel
 .railway
 pnpm-lock.yaml
+storage/

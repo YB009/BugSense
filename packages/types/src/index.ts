@@ -95,6 +95,36 @@ export interface AlertEvaluationJob {
   receivedAt: string;
 }
 
+export interface SourcemapUploadRequest {
+  projectId: string;
+  release: string;
+  fileName: string;
+  relativePath: string;
+  sourceMap: string;
+}
+
+export interface SourcemapUploadResponse {
+  projectId: string;
+  release: string;
+  fileName: string;
+  relativePath: string;
+  status: 'stored';
+  storedAt: string;
+  checksum: string;
+  storagePath: string;
+}
+
+export interface LiveErrorEvent {
+  eventId: string;
+  projectId: string;
+  message: string;
+  level: ErrorLevel;
+  platform: string;
+  environment: string;
+  exceptionType: string | null;
+  receivedAt: string;
+}
+
 export const SERVICE_TOKENS = {
   INGESTION: 'INGESTION_SERVICE',
   ALERT: 'ALERT_SERVICE',
@@ -111,5 +141,6 @@ export const BULL_JOBS = {
 export const TRANSPORT_PATTERNS = {
   INGESTION_HEALTH: { cmd: 'ingestion.health' },
   INGEST_EVENT: { cmd: 'ingestion.event.ingest' },
+  UPLOAD_SOURCEMAP: { cmd: 'ingestion.sourcemap.upload' },
   ALERT_HEALTH: { cmd: 'alert.health' },
 } as const;

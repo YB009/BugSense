@@ -3,14 +3,12 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { SERVICE_TOKENS } from '@bugsense/types';
 import { AuthModule } from '../auth/auth.module';
 import { getApiGatewayRuntimeConfig } from '../config/runtime-config';
-import { SseModule } from '../sse/sse.module';
-import { IngestController } from './ingest.controller';
-import { IngestService } from './ingest.service';
+import { SourcemapsController } from './sourcemaps.controller';
+import { SourcemapsService } from './sourcemaps.service';
 
 @Module({
   imports: [
     AuthModule,
-    SseModule,
     ClientsModule.registerAsync([
       {
         name: SERVICE_TOKENS.INGESTION,
@@ -27,7 +25,7 @@ import { IngestService } from './ingest.service';
       },
     ]),
   ],
-  controllers: [IngestController],
-  providers: [IngestService],
+  controllers: [SourcemapsController],
+  providers: [SourcemapsService],
 })
-export class IngestModule {}
+export class SourcemapsModule {}

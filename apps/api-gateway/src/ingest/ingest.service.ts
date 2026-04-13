@@ -6,28 +6,33 @@ import {
 import {
   IngestEventRequest,
   IngestEventResponse,
+  LiveErrorEvent,
   SERVICE_TOKENS,
   TRANSPORT_PATTERNS,
 } from '@bugsense/types';
 import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
+import { SseService } from '../sse/sse.service';
 
 @Injectable()
 export class IngestService {
   constructor(
     @Inject(SERVICE_TOKENS.INGESTION)
     private readonly ingestionClient: ClientProxy,
+    private readonly sseService: SseService,
   ) {}
 
   async ingest(payload: IngestEventRequest) {
     const validatedPayload = validateIngestEvent(payload);
-
-    return lastValueFrom(
+    const response = await lastValueFrom(
       this.ingestionClient.send<IngestEventResponse>(
         TRANSPORT_PATTERNS.INGEST_EVENT,
         validatedPayload,
       ),
     );
+
+    this.sseService.publishError(toLiveErrorEvent(validatedPayload, response));
+    return response;
   }
 }
 
@@ -81,4 +86,20 @@ function validateIngestEvent(payload: IngestEventRequest): IngestEventRequest {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function toLiveErrorEvent(
+  payload: IngestEventRequest,
+  response: IngestEventResponse,
+): LiveErrorEvent {
+  return {
+    eventId: response.eventId,
+    projectId: response.projectId,
+    message: payload.message,
+    level: payload.level ?? 'error',
+    platform: payload.platform,
+    environment: payload.environment ?? 'production',
+    exceptionType: payload.exceptionType ?? null,
+    receivedAt: response.receivedAt,
+  };
 }

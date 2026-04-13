@@ -30,6 +30,10 @@ export function loadEnvFiles(options: LoadEnvOptions = {}) {
   }
 }
 
+export function resolveWorkspacePath(...segments: string[]) {
+  return join(findWorkspaceRoot(process.cwd()), ...segments);
+}
+
 export function parseProjectApiKeys(
   rawValue: string | undefined,
 ): Record<string, string> {

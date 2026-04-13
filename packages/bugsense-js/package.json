@@ -7,6 +7,9 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "bugsense": "./dist/cli/upload-sourcemaps.cjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -32,14 +35,16 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "tsc --project tsconfig.json --noEmit",
-    "test": "node -e \"console.log('No tests yet for @bugsense/bugsense-js')\"",
+    "test": "node tests/run.mjs",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@bugsense/types": "workspace:*"
+    "@bugsense/types": "workspace:*",
+    "commander": "^13.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "@types/react": "^19.2.2",
     "tsup": "^8.3.5"
   },
   "peerDependencies": {
@@ -51,4 +56,3 @@
     }
   }
 }
-

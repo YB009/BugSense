@@ -1,3 +1,5 @@
+import { resolveWorkspacePath } from '@bugsense/config';
+
 export function getIngestionRuntimeConfig() {
   return {
     port: parsePort(process.env.PORT, 3001),
@@ -9,6 +11,9 @@ export function getIngestionRuntimeConfig() {
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
+    sourcemapStorageDir:
+      process.env.SOURCEMAP_STORAGE_DIR ??
+      resolveWorkspacePath('storage', 'sourcemaps'),
     redisConnection: {
       host: process.env.REDIS_HOST ?? '127.0.0.1',
       port: parsePort(process.env.REDIS_PORT, 6379),

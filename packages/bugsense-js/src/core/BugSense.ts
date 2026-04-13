@@ -1,5 +1,5 @@
 import { ErrorCollector } from '../collectors/ErrorCollector';
-import { HttpTransport } from '../transport/HttpTransport';
+import { FlushResult, HttpTransport } from '../transport/HttpTransport';
 
 export interface BugSenseClientOptions {
   apiKey: string;
@@ -8,6 +8,8 @@ export interface BugSenseClientOptions {
   environment?: string;
   release?: string;
   autoCapture?: boolean;
+  flushIntervalMs?: number;
+  maxBatchSize?: number;
 }
 
 export interface CaptureExceptionContext {
@@ -28,6 +30,8 @@ export class BugSense {
     this.transport = new HttpTransport({
       endpoint: options.endpoint,
       apiKey: options.apiKey,
+      flushIntervalMs: options.flushIntervalMs,
+      maxBatchSize: options.maxBatchSize,
     });
 
     if (options.autoCapture !== false) {
@@ -84,10 +88,27 @@ export class BugSense {
     this.cleanup?.stop();
   }
 
+  flush(): Promise<FlushResult> {
+    return this.transport.flush();
+  }
+
   captureException(error: unknown, context?: CaptureExceptionContext) {
     const collected = this.collector.collect(error);
     const payload = this.buildPayload(collected, context);
     return this.transport.send(payload);
+  }
+
+  captureMessage(message: string, context?: CaptureExceptionContext) {
+    return this.transport.send(
+      this.buildPayload(
+        {
+          message,
+          exceptionType: 'Message',
+          stackTrace: '',
+        },
+        context,
+      ),
+    );
   }
 
   private captureWindowError(

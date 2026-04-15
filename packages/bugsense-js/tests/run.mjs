@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 
-import { BugSense, ErrorCollector, HttpTransport } from '../dist/index.js';
+import {
+  BugSense,
+  ErrorCollector,
+  HttpTransport,
+  instrumentAxios,
+} from '../dist/index.js';
 
 const tests = [
   [
@@ -30,6 +35,14 @@ const tests = [
   [
     'HttpTransport reports failures when fetch is unavailable',
     testFetchUnavailable,
+  ],
+  [
+    'BugSense auto-instruments fetch and captures handled network failures',
+    testFetchInstrumentation,
+  ],
+  [
+    'instrumentAxios captures rejected Axios responses',
+    testAxiosInstrumentation,
   ],
 ];
 
@@ -299,6 +312,136 @@ async function testFetchUnavailable() {
     const result = await transport.send({ id: 1 });
 
     assert.deepEqual(result, { delivered: false, sent: 0, failed: 1 });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+async function testFetchInstrumentation() {
+  const originalWindow = globalThis.window;
+  const originalFetch = globalThis.fetch;
+  const deliveredPayloads = [];
+
+  globalThis.fetch = async (url, init) => {
+    if (String(url).startsWith('http://localhost:3000/ingest')) {
+      deliveredPayloads.push(JSON.parse(init.body));
+      return { ok: true, status: 202, statusText: 'Accepted' };
+    }
+
+    return { ok: false, status: 503, statusText: 'Service Unavailable' };
+  };
+
+  globalThis.window = {
+    onerror: null,
+    onunhandledrejection: null,
+  };
+
+  try {
+    const bugsense = new BugSense({
+      apiKey: 'key_dev_123',
+      endpoint: 'http://localhost:3000/ingest',
+      projectId: 'proj_123',
+      maxBatchSize: 1,
+      flushIntervalMs: 1000,
+    });
+
+    const response = await globalThis.fetch('http://localhost:3001/api/projects');
+
+    assert.equal(response.ok, false);
+    await tick();
+
+    assert.equal(deliveredPayloads.length, 1);
+    assert.equal(
+      deliveredPayloads[0].message,
+      'GET /api/projects - 503 Service Unavailable',
+    );
+    assert.equal(deliveredPayloads[0].tags.source, 'fetch');
+    assert.equal(deliveredPayloads[0].tags.statusCode, '503');
+    assert.equal(deliveredPayloads[0].tags.status, '503 Service Unavailable');
+    assert.equal(
+      deliveredPayloads[0].metadata.url,
+      'http://localhost:3001/api/projects',
+    );
+    assert.equal(deliveredPayloads[0].metadata.baseURL, 'http://localhost:3001');
+
+    bugsense.stop();
+  } finally {
+    globalThis.window = originalWindow;
+    globalThis.fetch = originalFetch;
+  }
+}
+
+async function testAxiosInstrumentation() {
+  const originalFetch = globalThis.fetch;
+  const deliveredPayloads = [];
+
+  globalThis.fetch = async (_url, init) => {
+    deliveredPayloads.push(JSON.parse(init.body));
+    return { ok: true };
+  };
+
+  try {
+    const bugsense = new BugSense({
+      apiKey: 'key_dev_123',
+      endpoint: 'http://localhost:3000/ingest',
+      projectId: 'proj_123',
+      autoCapture: false,
+      maxBatchSize: 1,
+      flushIntervalMs: 1000,
+    });
+
+    const handlers = [];
+    const axiosInstance = {
+      interceptors: {
+        response: {
+          use(_onFulfilled, onRejected) {
+            handlers.push(onRejected);
+            return handlers.length - 1;
+          },
+          eject(id) {
+            handlers[id] = null;
+          },
+        },
+      },
+    };
+
+    const cleanup = instrumentAxios(axiosInstance, bugsense);
+
+    const axiosError = {
+      message: 'Request failed with status code 500',
+      config: {
+        url: 'http://localhost:3001/api/projects',
+        method: 'get',
+        baseURL: 'http://localhost:3001',
+      },
+      response: {
+        status: 500,
+        statusText: 'Internal Server Error',
+      },
+    };
+
+    await assert.rejects(() => handlers[0](axiosError));
+    await tick();
+
+    assert.equal(deliveredPayloads.length, 1);
+    assert.equal(
+      deliveredPayloads[0].message,
+      'GET /api/projects - 500 Internal Server Error',
+    );
+    assert.equal(deliveredPayloads[0].tags.source, 'axios');
+    assert.equal(deliveredPayloads[0].tags.method, 'GET');
+    assert.equal(deliveredPayloads[0].tags.statusCode, '500');
+    assert.equal(
+      deliveredPayloads[0].tags.status,
+      '500 Internal Server Error',
+    );
+    assert.equal(
+      deliveredPayloads[0].metadata.url,
+      'http://localhost:3001/api/projects',
+    );
+    assert.equal(deliveredPayloads[0].metadata.baseURL, 'http://localhost:3001');
+
+    cleanup.stop();
   } finally {
     globalThis.fetch = originalFetch;
   }

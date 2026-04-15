@@ -7,6 +7,10 @@ interface LoginRequest {
   password?: string;
 }
 
+interface GoogleLoginRequest {
+  credential?: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -14,6 +18,11 @@ export class AuthController {
   @Post('login')
   async login(@Body() payload: LoginRequest) {
     return this.authService.login(payload.email, payload.password);
+  }
+
+  @Post('google')
+  async loginWithGoogle(@Body() payload: GoogleLoginRequest) {
+    return this.authService.loginWithGoogle(payload.credential);
   }
 
   @Get('me')

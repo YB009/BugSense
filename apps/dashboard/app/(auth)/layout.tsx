@@ -22,13 +22,17 @@ export default async function AuthenticatedLayout({
             <span>Overview</span>
             <span>01</span>
           </a>
-          <a className="sidebar-link" href="/dashboard">
+          <a className="sidebar-link" href="/issues">
             <span>Issues</span>
             <span>02</span>
           </a>
+          <a className="sidebar-link" href="/grouping">
+            <span>Grouping</span>
+            <span>03</span>
+          </a>
           <a className="sidebar-link" href="/dashboard">
             <span>Live Feed</span>
-            <span>03</span>
+            <span>04</span>
           </a>
         </nav>
       </aside>

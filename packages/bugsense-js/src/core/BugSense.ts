@@ -1,4 +1,8 @@
 import { ErrorCollector } from '../collectors/ErrorCollector';
+import {
+  FetchInstrumentationCleanup,
+  installFetchInstrumentation,
+} from '../integrations/fetch';
 import { FlushResult, HttpTransport } from '../transport/HttpTransport';
 
 export interface BugSenseClientOptions {
@@ -8,6 +12,7 @@ export interface BugSenseClientOptions {
   environment?: string;
   release?: string;
   autoCapture?: boolean;
+  autoInstrumentFetch?: boolean;
   flushIntervalMs?: number;
   maxBatchSize?: number;
 }
@@ -25,6 +30,7 @@ export class BugSense {
   private readonly collector = new ErrorCollector();
   private readonly transport: HttpTransport;
   private cleanup?: BrowserCollectorCleanup;
+  private fetchCleanup?: FetchInstrumentationCleanup;
 
   constructor(private readonly options: BugSenseClientOptions) {
     this.transport = new HttpTransport({
@@ -82,14 +88,24 @@ export class BugSense {
         this.cleanup = undefined;
       },
     };
+
+    if (this.options.autoInstrumentFetch !== false && !this.fetchCleanup) {
+      this.fetchCleanup = installFetchInstrumentation(this);
+    }
   }
 
   stop() {
     this.cleanup?.stop();
+    this.fetchCleanup?.stop();
+    this.fetchCleanup = undefined;
   }
 
   flush(): Promise<FlushResult> {
     return this.transport.flush();
+  }
+
+  getOptions() {
+    return this.options;
   }
 
   captureException(error: unknown, context?: CaptureExceptionContext) {

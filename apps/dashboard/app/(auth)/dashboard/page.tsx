@@ -1,8 +1,10 @@
 import { LiveErrorFeed } from '../../components/LiveErrorFeed';
 import { getDashboardAccessToken, getDashboardApiUrl } from '../../../lib/auth';
+import { fetchIssues } from '../../../lib/issues';
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const token = getDashboardAccessToken();
+  const issues = await fetchIssues();
 
   return (
     <section className="page-card">
@@ -15,7 +17,7 @@ export default function DashboardPage() {
       <div className="stats-grid">
         <article className="stat-tile">
           <p className="stat-label">Issues</p>
-          <p className="stat-value">0</p>
+          <p className="stat-value">{issues.length}</p>
         </article>
         <article className="stat-tile">
           <p className="stat-label">Error Rate</p>
@@ -25,6 +27,17 @@ export default function DashboardPage() {
           <p className="stat-label">Projects</p>
           <p className="stat-value">1</p>
         </article>
+      </div>
+      <div className="issue-summary-list">
+        {issues.slice(0, 3).map((issue) => (
+          <a className="issue-summary-item" href={`/issues/${issue.issueId}`} key={issue.issueId}>
+            <div>
+              <p className="issue-title">{issue.title}</p>
+              <p className="feed-detail">{issue.totalEvents} events</p>
+            </div>
+            <span className="feed-meta">{new Date(issue.lastSeenAt).toLocaleDateString()}</span>
+          </a>
+        ))}
       </div>
       {token ? (
         <LiveErrorFeed apiUrl={getDashboardApiUrl()} token={token} />

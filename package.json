@@ -6,6 +6,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
+    "dev:apps": "turbo run dev --parallel",
+    "dev:all": "docker compose up -d && turbo run dev --parallel",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "stack:up": "docker compose --profile app up -d --build",
+    "stack:down": "docker compose --profile app down",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
@@ -15,4 +21,3 @@
     "typescript": "^5.8.2"
   }
 }
-

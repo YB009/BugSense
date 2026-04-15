@@ -1,0 +1,233 @@
+name: bugsense
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: bugsense-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.3
+    container_name: bugsense-clickhouse
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infra/clickhouse/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "clickhouse-client",
+          "--host",
+          "127.0.0.1",
+          "--user",
+          "${CLICKHOUSE_USER}",
+          "--password",
+          "${CLICKHOUSE_PASSWORD}",
+          "--query",
+          "SELECT 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  alert-service:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/app.Dockerfile
+      args:
+        APP_FILTER: "@bugsense/alert-service"
+        APP_PATH: "apps/alert-service"
+    container_name: bugsense-alert-service
+    restart: unless-stopped
+    env_file:
+      - ./.env
+      - path: ./apps/alert-service/.env
+        required: false
+    environment:
+      PORT: 3002
+      TCP_HOST: 0.0.0.0
+      TCP_PORT: 4002
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-bugsense}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      BUGSENSE_ISSUES_STORAGE_PATH: /app/storage/issues/grouped-issues.json
+    ports:
+      - "3002:3002"
+    volumes:
+      - bugsense_storage:/app/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3002/rules/health >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ingestion-service:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/app.Dockerfile
+      args:
+        APP_FILTER: "@bugsense/ingestion-service"
+        APP_PATH: "apps/ingestion-service"
+    container_name: bugsense-ingestion-service
+    restart: unless-stopped
+    env_file:
+      - ./.env
+      - path: ./apps/ingestion-service/.env
+        required: false
+    environment:
+      PORT: 3001
+      TCP_HOST: 0.0.0.0
+      TCP_PORT: 4001
+      ALERT_TCP_HOST: alert-service
+      ALERT_TCP_PORT: 4002
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-bugsense}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      SOURCEMAP_STORAGE_DIR: /app/storage/sourcemaps
+    ports:
+      - "3001:3001"
+    volumes:
+      - bugsense_storage:/app/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      alert-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3001/events/health >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api-gateway:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/app.Dockerfile
+      args:
+        APP_FILTER: "@bugsense/api-gateway"
+        APP_PATH: "apps/api-gateway"
+    container_name: bugsense-api-gateway
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      PORT: 3000
+      TCP_HOST: 0.0.0.0
+      TCP_PORT: 4000
+      INGESTION_TCP_HOST: ingestion-service
+      INGESTION_TCP_PORT: 4001
+      ALERT_SERVICE_URL: http://alert-service:3002
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-bugsense}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      BUGSENSE_ISSUES_STORAGE_PATH: /app/storage/issues/grouped-issues.json
+      BUGSENSE_DASHBOARD_URL: http://localhost:3005
+      BUGSENSE_ALLOWED_ORIGINS: http://localhost:3005,http://localhost:4173
+    ports:
+      - "3000:3000"
+    volumes:
+      - bugsense_storage:/app/storage
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      ingestion-service:
+        condition: service_healthy
+      alert-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/projects/transport/health >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 35s
+
+  dashboard:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/app.Dockerfile
+      args:
+        APP_FILTER: "@bugsense/dashboard"
+        APP_PATH: "apps/dashboard"
+    container_name: bugsense-dashboard
+    restart: unless-stopped
+    env_file:
+      - path: ./apps/dashboard/.env
+        required: false
+    environment:
+      BUGSENSE_API_URL: http://api-gateway:3000
+    ports:
+      - "3005:3005"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3005/login >/dev/null 2>&1 || exit 1"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  redis_data:
+  clickhouse_data:
+  bugsense_storage:

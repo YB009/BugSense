@@ -19,6 +19,14 @@ export function getDashboardTokenCookieName() {
   );
 }
 
+export function getDashboardGoogleClientId() {
+  return (
+    process.env.NEXT_PUBLIC_BUGSENSE_GOOGLE_CLIENT_ID ??
+    process.env.BUGSENSE_GOOGLE_CLIENT_ID ??
+    ''
+  );
+}
+
 export function getDashboardAccessToken() {
   return cookies().get(getDashboardTokenCookieName())?.value ?? null;
 }

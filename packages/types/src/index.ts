@@ -95,6 +95,26 @@ export interface AlertEvaluationJob {
   receivedAt: string;
 }
 
+export interface AlertThresholdRule {
+  threshold: number;
+  windowSeconds: number;
+  cooldownSeconds: number;
+}
+
+export interface ProjectAlertRules {
+  error?: AlertThresholdRule;
+  warning?: AlertThresholdRule;
+  info?: AlertThresholdRule;
+}
+
+export interface AlertRulesConfig {
+  [projectId: string]: ProjectAlertRules;
+}
+
+export interface AlertEmailRecipientsConfig {
+  [projectId: string]: string[];
+}
+
 export interface SourcemapUploadRequest {
   projectId: string;
   release: string;
@@ -125,6 +145,69 @@ export interface LiveErrorEvent {
   receivedAt: string;
 }
 
+export interface GroupingCandidateEvent {
+  eventId: string;
+  projectId: string;
+  issueFingerprint: string;
+  message: string;
+  exceptionType: string | null;
+  stackTrace: string;
+  environment: string;
+  platform: string;
+  receivedAt: string;
+}
+
+export interface GroupedIssue {
+  issueId: string;
+  projectId: string;
+  clusterKey: string;
+  title: string;
+  summary: string;
+  eventIds: string[];
+  fingerprints: string[];
+  sampleMessage: string;
+  sampleStackTrace: string;
+  environments: string[];
+  platforms: string[];
+  firstSeenAt: string;
+  lastSeenAt: string;
+  updatedAt: string;
+}
+
+export interface IssueListItem extends GroupedIssue {
+  totalEvents: number;
+}
+
+export interface IssueBreakdownItem {
+  label: string;
+  count: number;
+}
+
+export interface IssueDetail {
+  issue: GroupedIssue;
+  totalEvents: number;
+  affectedUsers: number;
+  browserBreakdown: IssueBreakdownItem[];
+  osBreakdown: IssueBreakdownItem[];
+  stackTrace: string;
+}
+
+export interface IssueAnalysisResult {
+  issueId: string;
+  model: string;
+  provider: 'gemini' | 'heuristic';
+  rootCause: string;
+  suggestedFix: string;
+  confidence: 'low' | 'medium' | 'high';
+}
+
+export interface IssueGroupingRunResult {
+  status: 'completed';
+  groupedCount: number;
+  generatedAt: string;
+  issues: GroupedIssue[];
+}
+
 export const SERVICE_TOKENS = {
   INGESTION: 'INGESTION_SERVICE',
   ALERT: 'ALERT_SERVICE',
@@ -136,6 +219,7 @@ export const BULL_QUEUES = {
 
 export const BULL_JOBS = {
   EVALUATE_ALERT: 'evaluate-alert',
+  GROUP_ISSUES_NIGHTLY: 'group-issues-nightly',
 } as const;
 
 export const TRANSPORT_PATTERNS = {

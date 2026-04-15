@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
 import { LoginForm } from './LoginForm';
-import { getAuthenticatedUser } from '../../lib/auth';
+import { GoogleAuthButton } from './GoogleAuthButton';
+import { getAuthenticatedUser, getDashboardGoogleClientId } from '../../lib/auth';
 
 export default async function LoginPage() {
   const user = await getAuthenticatedUser();
+  const googleClientId = getDashboardGoogleClientId();
 
   if (user) {
     redirect('/dashboard');
@@ -21,6 +23,19 @@ export default async function LoginPage() {
             it server-side on every render.
           </p>
           <LoginForm />
+          {googleClientId ? (
+            <>
+              <div className="auth-divider">
+                <span>or</span>
+              </div>
+              <GoogleAuthButton clientId={googleClientId} label="signin_with" />
+              <div className="button-row">
+                <a className="ghost-button" href="/signup">
+                  Create account
+                </a>
+              </div>
+            </>
+          ) : null}
         </div>
       </section>
     </main>

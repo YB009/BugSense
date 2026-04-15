@@ -13,6 +13,21 @@ async function bootstrap() {
   const config = getApiGatewayRuntimeConfig();
   const { AppModule } = await import('./app.module');
   const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin(
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) {
+      if (!origin || isAllowedOrigin(origin, config.allowedOrigins)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS.`), false);
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-bugsense-api-key'],
+  });
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   app.connectMicroservice<MicroserviceOptions>({
@@ -28,3 +43,11 @@ async function bootstrap() {
 }
 
 void bootstrap();
+
+function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+}

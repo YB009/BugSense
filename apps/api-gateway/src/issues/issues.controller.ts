@@ -25,6 +25,11 @@ export class IssuesController {
     return this.issuesService.runGrouping();
   }
 
+  @Get('grouping/current')
+  async getCurrentGrouping() {
+    return this.issuesService.getCurrentGrouping();
+  }
+
   @Get(':id')
   async getIssueDetail(@Param('id') issueId: string) {
     return this.issuesService.getIssueDetail(issueId);

@@ -34,7 +34,7 @@ export async function loginAction(_previousState: LoginActionState, formData: Fo
     return { error: 'Login response did not contain an access token.' };
   }
 
-  cookies().set(getDashboardTokenCookieName(), payload.accessToken, {
+  (await cookies()).set(getDashboardTokenCookieName(), payload.accessToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: false,

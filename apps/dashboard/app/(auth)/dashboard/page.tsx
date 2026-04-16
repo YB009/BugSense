@@ -3,7 +3,7 @@ import { getDashboardAccessToken, getDashboardApiUrl } from '../../../lib/auth';
 import { fetchIssues } from '../../../lib/issues';
 
 export default async function DashboardPage() {
-  const token = getDashboardAccessToken();
+  const token = await getDashboardAccessToken();
   const issues = await fetchIssues();
 
   return (

@@ -3,6 +3,6 @@ import { NextResponse } from 'next/server';
 import { getDashboardTokenCookieName } from '../../lib/auth';
 
 export async function POST() {
-  cookies().delete(getDashboardTokenCookieName());
+  (await cookies()).delete(getDashboardTokenCookieName());
   return NextResponse.redirect(new URL('/login', 'http://localhost:3005'));
 }

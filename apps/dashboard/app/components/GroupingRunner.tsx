@@ -1,17 +1,34 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import type { IssueGroupingRunResult } from '../../lib/issues';
 
 export interface GroupingRunnerProps {
   apiUrl: string;
+  initialResult: IssueGroupingRunResult | null;
   token: string;
 }
 
-export function GroupingRunner({ apiUrl, token }: GroupingRunnerProps) {
+const STORAGE_PREFIX = 'bugsense:grouping-result:';
+
+export function GroupingRunner({
+  apiUrl,
+  initialResult,
+  token,
+}: GroupingRunnerProps) {
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<IssueGroupingRunResult | null>(null);
+  const [result, setResult] = useState<IssueGroupingRunResult | null>(
+    initialResult,
+  );
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setResult(initialResult ?? readTodayResult());
+  }, [initialResult]);
+
+  useEffect(() => {
+    writeTodayResult(result);
+  }, [result]);
 
   function handleRun() {
     setError(null);
@@ -57,7 +74,7 @@ export function GroupingRunner({ apiUrl, token }: GroupingRunnerProps) {
           onClick={handleRun}
           type="button"
         >
-          {isPending ? 'Running…' : 'Run grouping now'}
+          {isPending ? 'Running...' : 'Run grouping now'}
         </button>
       </div>
       {error ? <p className="muted error-text">{error}</p> : null}
@@ -89,4 +106,71 @@ export function GroupingRunner({ apiUrl, token }: GroupingRunnerProps) {
       ) : null}
     </section>
   );
+}
+
+function readTodayResult() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    clearOldGroupingKeys();
+    const raw = window.localStorage.getItem(storageKey());
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as IssueGroupingRunResult;
+    return isToday(parsed.generatedAt) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeTodayResult(result: IssueGroupingRunResult | null) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    if (!result || !isToday(result.generatedAt)) {
+      window.localStorage.removeItem(storageKey());
+      return;
+    }
+
+    window.localStorage.setItem(storageKey(), JSON.stringify(result));
+  } catch {
+    // Storage failures should not block grouping.
+  }
+}
+
+function storageKey() {
+  return `${STORAGE_PREFIX}${todayKey()}`;
+}
+
+function todayKey() {
+  return dateKey(new Date());
+}
+
+function isToday(value: string) {
+  return dateKey(new Date(value)) === todayKey();
+}
+
+function dateKey(date: Date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function clearOldGroupingKeys() {
+  const currentKey = storageKey();
+
+  for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith(STORAGE_PREFIX) && key !== currentKey) {
+      window.localStorage.removeItem(key);
+    }
+  }
 }

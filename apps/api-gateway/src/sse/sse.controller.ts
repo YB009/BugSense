@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   MessageEvent,
   Query,
   Sse,
@@ -26,5 +27,17 @@ export class SseController {
 
     await this.authService.verifyAccessToken(token);
     return this.sseService.createErrorStream();
+  }
+
+  @Get('errors/recent')
+  async getRecentErrors(@Query('token') queryToken: string | undefined) {
+    if (!queryToken) {
+      throw new UnauthorizedException('Missing dashboard token');
+    }
+
+    await this.authService.verifyAccessToken(queryToken);
+    return {
+      events: await this.sseService.getRecentErrors(),
+    };
   }
 }

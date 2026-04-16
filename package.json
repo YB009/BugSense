@@ -5,9 +5,9 @@
   "packageManager": "pnpm@10.25.0",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev --parallel",
-    "dev:apps": "turbo run dev --parallel",
-    "dev:all": "docker compose up -d && turbo run dev --parallel",
+    "dev": "pnpm infra:up && turbo run dev --parallel",
+    "dev:apps": "pnpm infra:up && turbo run dev --parallel",
+    "dev:all": "pnpm infra:up && turbo run dev --parallel",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "stack:up": "docker compose --profile app up -d --build",

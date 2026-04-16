@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     );
   }
 
-  cookies().set(getDashboardTokenCookieName(), authPayload.accessToken, {
+  (await cookies()).set(getDashboardTokenCookieName(), authPayload.accessToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: false,

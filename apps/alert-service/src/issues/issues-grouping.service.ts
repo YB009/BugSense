@@ -15,7 +15,7 @@ export class IssuesGroupingService {
   ) {}
 
   async groupNightly(): Promise<GroupedIssue[]> {
-    const candidates = await this.issuesQueryService.fetchGroupingCandidates(24);
+    const candidates = await this.issuesQueryService.fetchGroupingCandidates();
     this.logger.log(`Fetched ${candidates.length} event(s) for nightly grouping`);
 
     const grouped = await this.openAiGroupingService.groupEvents(candidates);

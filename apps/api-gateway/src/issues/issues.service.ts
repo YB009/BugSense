@@ -28,6 +28,20 @@ export class IssuesService {
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
   }
 
+  async getCurrentGrouping(): Promise<IssueGroupingRunResult | null> {
+    const payload = await this.loadIssuesPayload();
+    if (!payload.generatedAt || !payload.issues?.length) {
+      return null;
+    }
+
+    return {
+      status: 'completed',
+      groupedCount: payload.issues.length,
+      generatedAt: payload.generatedAt,
+      issues: payload.issues,
+    };
+  }
+
   async getIssueDetail(issueId: string): Promise<IssueDetail> {
     const issue = await this.getIssueById(issueId);
     const breakdown = await this.queryBreakdown(issue.eventIds);
@@ -157,12 +171,22 @@ export class IssuesService {
   }
 
   private async loadIssues(): Promise<GroupedIssue[]> {
+    const payload = await this.loadIssuesPayload();
+    return payload.issues ?? [];
+  }
+
+  private async loadIssuesPayload(): Promise<{
+    generatedAt?: string;
+    issues?: GroupedIssue[];
+  }> {
     try {
       const contents = await readFile(this.config.issuesStoragePath, 'utf8');
-      const payload = JSON.parse(contents) as { issues?: GroupedIssue[] };
-      return payload.issues ?? [];
+      return JSON.parse(contents) as {
+        generatedAt?: string;
+        issues?: GroupedIssue[];
+      };
     } catch {
-      return [];
+      return {};
     }
   }
 

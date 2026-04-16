@@ -4,6 +4,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { EnrichedErrorEvent } from '@bugsense/types';
+import { request as httpRequest } from 'http';
+import { request as httpsRequest } from 'https';
 import { getIngestionRuntimeConfig } from '../config/runtime-config';
 
 @Injectable()
@@ -13,20 +15,16 @@ export class ClickHouseService {
 
   async insertErrorEvent(event: EnrichedErrorEvent) {
     const query = `INSERT INTO ${this.config.clickhouseDb}.error_events FORMAT JSONEachRow`;
-    const response = await fetch(
-      `${this.config.clickhouseUrl}/?query=${encodeURIComponent(query)}`,
-      {
-        method: 'POST',
-        headers: this.buildHeaders(),
-        body: `${JSON.stringify(this.toClickHouseRow(event))}\n`,
-      },
-    );
+    const url = new URL(this.config.clickhouseUrl);
+    url.searchParams.set('query', query);
 
-    if (!response.ok) {
-      const message = await response.text();
-      this.logger.error(`ClickHouse insert failed: ${message}`);
+    const payload = `${JSON.stringify(this.toClickHouseRow(event))}\n`;
+    const response = await this.sendRequest(url, payload);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      this.logger.error(`ClickHouse insert failed: ${response.body}`);
       throw new InternalServerErrorException(
-        `ClickHouse insert failed: ${message}`,
+        `ClickHouse insert failed: ${response.body}`,
       );
     }
   }
@@ -37,14 +35,53 @@ export class ClickHouseService {
     };
 
     if (this.config.clickhouseUser) {
-      headers['X-ClickHouse-User'] = this.config.clickhouseUser;
-    }
-
-    if (this.config.clickhousePassword) {
-      headers['X-ClickHouse-Key'] = this.config.clickhousePassword;
+      const auth = Buffer.from(
+        `${this.config.clickhouseUser}:${this.config.clickhousePassword ?? ''}`,
+      ).toString('base64');
+      headers.Authorization = `Basic ${auth}`;
     }
 
     return headers;
+  }
+
+  private sendRequest(url: URL, payload: string) {
+    const requestImpl = url.protocol === 'https:' ? httpsRequest : httpRequest;
+    const headers = {
+      ...this.buildHeaders(),
+      'Content-Length': Buffer.byteLength(payload).toString(),
+    };
+
+    return new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
+      const req = requestImpl(
+        url,
+        {
+          method: 'POST',
+          headers,
+          timeout: 10000,
+        },
+        (res) => {
+          let body = '';
+
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => {
+            body += chunk;
+          });
+          res.on('end', () => {
+            resolve({
+              statusCode: res.statusCode ?? 500,
+              body,
+            });
+          });
+        },
+      );
+
+      req.on('timeout', () => {
+        req.destroy(new Error('ClickHouse request timed out'));
+      });
+      req.on('error', reject);
+      req.write(payload);
+      req.end();
+    });
   }
 
   private toClickHouseRow(event: EnrichedErrorEvent) {

@@ -152,6 +152,8 @@ export interface GroupingCandidateEvent {
   message: string;
   exceptionType: string | null;
   stackTrace: string;
+  requestUrl: string | null;
+  metadataJson: string;
   environment: string;
   platform: string;
   receivedAt: string;

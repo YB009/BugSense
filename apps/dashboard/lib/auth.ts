@@ -27,12 +27,12 @@ export function getDashboardGoogleClientId() {
   );
 }
 
-export function getDashboardAccessToken() {
-  return cookies().get(getDashboardTokenCookieName())?.value ?? null;
+export async function getDashboardAccessToken() {
+  return (await cookies()).get(getDashboardTokenCookieName())?.value ?? null;
 }
 
 export async function getAuthenticatedUser(): Promise<DashboardUser | null> {
-  const token = getDashboardAccessToken();
+  const token = await getDashboardAccessToken();
 
   if (!token) {
     return null;

@@ -4,14 +4,15 @@ import { getDashboardAccessToken, getDashboardApiUrl } from '../../../../lib/aut
 import { fetchIssueDetail } from '../../../../lib/issues';
 
 interface IssueDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function IssueDetailPage({ params }: IssueDetailPageProps) {
-  const issue = await fetchIssueDetail(params.id);
-  const token = getDashboardAccessToken();
+  const { id } = await params;
+  const issue = await fetchIssueDetail(id);
+  const token = await getDashboardAccessToken();
   const apiUrl = getDashboardApiUrl();
 
   return (
@@ -61,7 +62,7 @@ export default async function IssueDetailPage({ params }: IssueDetailPageProps) 
         </div>
       </section>
 
-      {token ? <AIPanel apiUrl={apiUrl} token={token} issueId={params.id} /> : null}
+      {token ? <AIPanel apiUrl={apiUrl} token={token} issueId={id} /> : null}
     </div>
   );
 }

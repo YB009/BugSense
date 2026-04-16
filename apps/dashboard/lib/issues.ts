@@ -50,7 +50,7 @@ export interface IssueGroupingRunResult {
 }
 
 export async function fetchIssues(): Promise<IssueListItem[]> {
-  const token = getDashboardAccessToken();
+  const token = await getDashboardAccessToken();
   if (!token) {
     return [];
   }
@@ -71,7 +71,7 @@ export async function fetchIssues(): Promise<IssueListItem[]> {
 }
 
 export async function fetchIssueDetail(issueId: string): Promise<IssueDetail> {
-  const token = getDashboardAccessToken();
+  const token = await getDashboardAccessToken();
   if (!token) {
     notFound();
   }
@@ -95,7 +95,7 @@ export async function fetchIssueDetail(issueId: string): Promise<IssueDetail> {
 }
 
 export async function analyzeIssue(issueId: string): Promise<IssueAnalysisResult> {
-  const token = getDashboardAccessToken();
+  const token = await getDashboardAccessToken();
   if (!token) {
     throw new Error('Missing dashboard token');
   }
@@ -116,7 +116,7 @@ export async function analyzeIssue(issueId: string): Promise<IssueAnalysisResult
 }
 
 export async function runIssueGrouping(): Promise<IssueGroupingRunResult> {
-  const token = getDashboardAccessToken();
+  const token = await getDashboardAccessToken();
   if (!token) {
     throw new Error('Missing dashboard token');
   }
@@ -134,4 +134,45 @@ export async function runIssueGrouping(): Promise<IssueGroupingRunResult> {
   }
 
   return (await response.json()) as IssueGroupingRunResult;
+}
+
+export async function fetchCurrentGrouping(): Promise<IssueGroupingRunResult | null> {
+  const token = await getDashboardAccessToken();
+  if (!token) {
+    return null;
+  }
+
+  const response = await fetch(`${getDashboardApiUrl()}/issues/grouping/current`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return null;
+  }
+
+  const payload = JSON.parse(raw) as IssueGroupingRunResult | null;
+  if (!payload || !isToday(payload.generatedAt)) {
+    return null;
+  }
+
+  return payload;
+}
+
+function isToday(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
 }

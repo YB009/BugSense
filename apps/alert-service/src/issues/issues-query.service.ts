@@ -11,7 +11,7 @@ export class IssuesQueryService {
   private readonly logger = new Logger(IssuesQueryService.name);
   private readonly config = getAlertRuntimeConfig();
 
-  async fetchGroupingCandidates(lastHours = 24): Promise<GroupingCandidateEvent[]> {
+  async fetchGroupingCandidates(): Promise<GroupingCandidateEvent[]> {
     const query = `
       SELECT
         event_id,
@@ -20,11 +20,13 @@ export class IssuesQueryService {
         message,
         exception_type,
         stack_trace,
+        request_url,
+        metadata_json,
         environment,
         platform,
-        toString(received_at) AS received_at
+        toString(received_at) AS received_at_text
       FROM ${this.config.clickhouseDb}.error_events
-      WHERE received_at >= now() - toIntervalHour(${lastHours})
+      WHERE received_at >= toStartOfDay(now())
       ORDER BY received_at DESC
       LIMIT 500
       FORMAT JSONEachRow
@@ -59,9 +61,11 @@ export class IssuesQueryService {
         message: String(row.message),
         exceptionType: row.exception_type ? String(row.exception_type) : null,
         stackTrace: String(row.stack_trace ?? ''),
+        requestUrl: row.request_url ? String(row.request_url) : null,
+        metadataJson: String(row.metadata_json ?? '{}'),
         environment: String(row.environment),
         platform: String(row.platform),
-        receivedAt: new Date(String(row.received_at)).toISOString(),
+        receivedAt: new Date(String(row.received_at_text)).toISOString(),
       }));
   }
 

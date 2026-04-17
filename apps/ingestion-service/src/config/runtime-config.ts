@@ -14,12 +14,7 @@ export function getIngestionRuntimeConfig() {
     sourcemapStorageDir:
       process.env.SOURCEMAP_STORAGE_DIR ??
       resolveWorkspacePath('storage', 'sourcemaps'),
-    redisConnection: {
-      host: process.env.REDIS_HOST ?? '127.0.0.1',
-      port: parsePort(process.env.REDIS_PORT, 6379),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null as null,
-    },
+    redisConnection: parseRedisConnection(),
   };
 }
 
@@ -30,4 +25,35 @@ function parsePort(value: string | undefined, fallback: number) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseRedisConnection() {
+  const redisUrl = process.env.REDIS_URL;
+
+  if (redisUrl) {
+    try {
+      const parsed = new URL(redisUrl);
+      return {
+        host: parsed.hostname,
+        port: parsePort(parsed.port, 6379),
+        username: parsed.username
+          ? decodeURIComponent(parsed.username)
+          : undefined,
+        password: parsed.password
+          ? decodeURIComponent(parsed.password)
+          : undefined,
+        tls: parsed.protocol === 'rediss:' ? {} : undefined,
+        maxRetriesPerRequest: null as null,
+      };
+    } catch {
+      // Fall back to the individual Redis variables below.
+    }
+  }
+
+  return {
+    host: process.env.REDIS_HOST ?? '127.0.0.1',
+    port: parsePort(process.env.REDIS_PORT, 6379),
+    password: process.env.REDIS_PASSWORD || undefined,
+    maxRetriesPerRequest: null as null,
+  };
 }

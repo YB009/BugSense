@@ -40,6 +40,7 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   await app.listen(config.port, '0.0.0.0');
+  console.log(`API Gateway HTTP server listening on port ${config.port}`);
 }
 
 void bootstrap();

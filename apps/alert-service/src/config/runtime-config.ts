@@ -81,7 +81,7 @@ function parseAlertRules(value: string | undefined): AlertRulesConfig {
     return {
       '*': {
         error: {
-          threshold: 1,
+          threshold: 3,
           windowSeconds: 300,
           cooldownSeconds: 900,
         },
@@ -96,7 +96,7 @@ function parseAlertRules(value: string | undefined): AlertRulesConfig {
     return {
       '*': {
         error: {
-          threshold: 1,
+          threshold: 3,
           windowSeconds: 300,
           cooldownSeconds: 900,
         },

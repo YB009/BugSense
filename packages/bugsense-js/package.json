@@ -1,14 +1,14 @@
 {
   "name": "@bugsense/bugsense-js",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "description": "BugSense JavaScript SDK for browser and Node error capture.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "bugsense": "./dist/cli/upload-sourcemaps.cjs"
+    "bugsense": "dist/cli/upload-sourcemaps.cjs"
   },
   "exports": {
     ".": {
@@ -30,6 +30,16 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "bugsense",
+    "error-monitoring",
+    "error-reporting",
+    "sourcemaps",
+    "observability"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
@@ -39,7 +49,6 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@bugsense/types": "workspace:*",
     "commander": "^13.1.0"
   },
   "devDependencies": {

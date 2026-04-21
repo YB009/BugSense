@@ -32,6 +32,10 @@ export function getAlertRuntimeConfig() {
     alertEmailFrom:
       process.env.BUGSENSE_ALERT_EMAIL_FROM ?? 'Bugsense <alerts@example.com>',
     alertEmailRecipients,
+    apiGatewayUrl: process.env.BUGSENSE_API_GATEWAY_URL ?? 'http://127.0.0.1:3000',
+    internalServiceToken:
+      process.env.BUGSENSE_INTERNAL_SERVICE_TOKEN ??
+      'dev-only-internal-token',
     redisConnection: parseRedisConnection(),
   };
 }

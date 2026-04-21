@@ -4,16 +4,21 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { getApiGatewayRuntimeConfig } from '../config/runtime-config';
+import { WorkspaceStoreService } from './workspace-store.service';
 
 export interface JwtUser {
   sub: string;
   email: string;
   role: 'admin';
+  projectIds: string[];
 }
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly workspaceStore: WorkspaceStoreService,
+  ) {}
 
   async login(email: string | undefined, password: string | undefined) {
     const config = getApiGatewayRuntimeConfig();
@@ -25,10 +30,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const user: JwtUser = {
-      sub: 'admin',
+    const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
       email,
+      authProvider: 'password',
+    });
+
+    const user: JwtUser = {
+      sub: workspace!.user.id,
+      email: workspace!.user.email,
       role: 'admin',
+      projectIds: workspace!.projects.map((project) => project.id),
     };
 
     return {
@@ -90,10 +101,16 @@ export class AuthService {
       throw new UnauthorizedException('Google account is not allowed');
     }
 
+    const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
+      email,
+      authProvider: 'google',
+    });
+
     const user: JwtUser = {
-      sub: payload.sub ?? email,
+      sub: workspace!.user.id,
       email,
       role: 'admin',
+      projectIds: workspace!.projects.map((project) => project.id),
     };
 
     return {
@@ -102,12 +119,20 @@ export class AuthService {
     };
   }
 
-  validateProjectApiKey(projectId: string, apiKey: string | undefined) {
+  async validateProjectApiKey(projectId: string, apiKey: string | undefined) {
     const config = getApiGatewayRuntimeConfig();
     const expectedApiKey = config.projectApiKeys[projectId];
 
     if (!apiKey) {
       throw new UnauthorizedException('Missing x-bugsense-api-key header');
+    }
+
+    const workspaceProject = await this.workspaceStore.getProjectForApiKey(
+      projectId,
+      apiKey,
+    );
+    if (workspaceProject) {
+      return;
     }
 
     if (!expectedApiKey) {
@@ -121,7 +146,21 @@ export class AuthService {
 
   async verifyAccessToken(token: string) {
     try {
-      return await this.jwtService.verifyAsync<JwtUser>(token);
+      const user = await this.jwtService.verifyAsync<JwtUser>(token);
+      if (Array.isArray(user.projectIds)) {
+        return user;
+      }
+
+      const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
+        email: user.email,
+        authProvider: 'google',
+      });
+
+      return {
+        ...user,
+        sub: workspace!.user.id,
+        projectIds: workspace!.projects.map((project) => project.id),
+      };
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }

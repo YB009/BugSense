@@ -25,8 +25,8 @@ export class SseController {
       throw new UnauthorizedException('Missing dashboard token');
     }
 
-    await this.authService.verifyAccessToken(token);
-    return this.sseService.createErrorStream();
+    const user = await this.authService.verifyAccessToken(token);
+    return this.sseService.createErrorStream(user.projectIds);
   }
 
   @Get('errors/recent')
@@ -35,9 +35,9 @@ export class SseController {
       throw new UnauthorizedException('Missing dashboard token');
     }
 
-    await this.authService.verifyAccessToken(queryToken);
+    const user = await this.authService.verifyAccessToken(queryToken);
     return {
-      events: await this.sseService.getRecentErrors(),
+      events: await this.sseService.getRecentErrors(user.projectIds),
     };
   }
 }

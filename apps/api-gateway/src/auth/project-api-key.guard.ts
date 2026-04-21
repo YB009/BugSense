@@ -10,7 +10,7 @@ import { AuthService } from './auth.service';
 export class ProjectApiKeyGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
 
-  canActivate(context: ExecutionContext) {
+  async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<{
       body?: { projectId?: string };
       headers: Record<string, string | string[] | undefined>;
@@ -24,7 +24,7 @@ export class ProjectApiKeyGuard implements CanActivate {
     const apiKeyHeader = request.headers['x-bugsense-api-key'];
     const apiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
 
-    this.authService.validateProjectApiKey(projectId, apiKey);
+    await this.authService.validateProjectApiKey(projectId, apiKey);
     return true;
   }
 }

@@ -40,6 +40,11 @@ export function getApiGatewayRuntimeConfig() {
     issuesStoragePath:
       process.env.BUGSENSE_ISSUES_STORAGE_PATH ??
       resolveWorkspacePath('storage', 'issues', 'grouped-issues.json'),
+    databaseUrl: process.env.DATABASE_URL,
+    databaseSsl: parseBoolean(process.env.DATABASE_SSL, false),
+    internalServiceToken:
+      process.env.BUGSENSE_INTERNAL_SERVICE_TOKEN ??
+      'dev-only-internal-token',
   };
 }
 

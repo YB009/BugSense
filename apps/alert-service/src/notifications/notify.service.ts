@@ -24,7 +24,7 @@ export class NotifyService {
     : undefined;
 
   async sendAlert(notification: AlertNotification) {
-    const recipients = this.resolveRecipients(notification.projectId);
+    const recipients = await this.resolveRecipients(notification.projectId);
     const summary = this.formatSummary(notification);
 
     this.logger.warn(summary);
@@ -59,12 +59,45 @@ export class NotifyService {
     }
   }
 
-  private resolveRecipients(projectId: string) {
-    return (
+  private async resolveRecipients(projectId: string) {
+    const configuredRecipients =
       this.config.alertEmailRecipients[projectId] ??
-      this.config.alertEmailRecipients['*'] ??
-      []
-    );
+      this.config.alertEmailRecipients['*'];
+
+    if (configuredRecipients?.length) {
+      return configuredRecipients;
+    }
+
+    try {
+      const response = await fetch(
+        `${this.config.apiGatewayUrl}/projects/internal/${encodeURIComponent(
+          projectId,
+        )}/alert-recipients`,
+        {
+          headers: {
+            'x-bugsense-internal-token': this.config.internalServiceToken,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const payload = (await response.json()) as { emails?: unknown };
+      return Array.isArray(payload.emails)
+        ? payload.emails
+            .map((email) => String(email).trim())
+            .filter(Boolean)
+        : [];
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown recipient lookup error';
+      this.logger.error(
+        `Failed to resolve alert recipients for project ${projectId}: ${message}`,
+      );
+      return [];
+    }
   }
 
   private formatSummary(notification: AlertNotification) {

@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt.guard';
 import { ProjectApiKeyGuard } from './project-api-key.guard';
+import { WorkspaceStoreService } from './workspace-store.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ProjectApiKeyGuard } from './project-api-key.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, ProjectApiKeyGuard],
-  exports: [AuthService, JwtAuthGuard, ProjectApiKeyGuard],
+  providers: [AuthService, JwtAuthGuard, ProjectApiKeyGuard, WorkspaceStoreService],
+  exports: [AuthService, JwtAuthGuard, ProjectApiKeyGuard, WorkspaceStoreService],
 })
 export class AuthModule {}

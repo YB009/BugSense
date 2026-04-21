@@ -18,9 +18,10 @@ import { getApiGatewayRuntimeConfig } from '../config/runtime-config';
 export class IssuesService {
   private readonly config = getApiGatewayRuntimeConfig();
 
-  async listIssues(): Promise<IssueListItem[]> {
+  async listIssues(projectIds: string[]): Promise<IssueListItem[]> {
     const issues = await this.loadIssues();
     return issues
+      .filter((issue) => projectIds.includes(issue.projectId))
       .map((issue) => ({
         ...issue,
         totalEvents: issue.eventIds.length,
@@ -28,22 +29,25 @@ export class IssuesService {
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
   }
 
-  async getCurrentGrouping(): Promise<IssueGroupingRunResult | null> {
+  async getCurrentGrouping(projectIds: string[]): Promise<IssueGroupingRunResult | null> {
     const payload = await this.loadIssuesPayload();
-    if (!payload.generatedAt || !payload.issues?.length) {
+    const issues = (payload.issues ?? []).filter((issue) =>
+      projectIds.includes(issue.projectId),
+    );
+    if (!payload.generatedAt || issues.length === 0) {
       return null;
     }
 
     return {
       status: 'completed',
-      groupedCount: payload.issues.length,
+      groupedCount: issues.length,
       generatedAt: payload.generatedAt,
-      issues: payload.issues,
+      issues,
     };
   }
 
-  async getIssueDetail(issueId: string): Promise<IssueDetail> {
-    const issue = await this.getIssueById(issueId);
+  async getIssueDetail(issueId: string, projectIds: string[]): Promise<IssueDetail> {
+    const issue = await this.getIssueById(issueId, projectIds);
     const breakdown = await this.queryBreakdown(issue.eventIds);
 
     return {
@@ -56,8 +60,11 @@ export class IssuesService {
     };
   }
 
-  async analyzeIssue(issueId: string): Promise<IssueAnalysisResult> {
-    const issue = await this.getIssueById(issueId);
+  async analyzeIssue(
+    issueId: string,
+    projectIds: string[],
+  ): Promise<IssueAnalysisResult> {
+    const issue = await this.getIssueById(issueId, projectIds);
 
     if (!this.config.geminiApiKey) {
       return heuristicAnalysis(issue, this.config.aiPanelModel);
@@ -159,9 +166,12 @@ export class IssuesService {
     return (await response.json()) as IssueGroupingRunResult;
   }
 
-  private async getIssueById(issueId: string) {
+  private async getIssueById(issueId: string, projectIds: string[]) {
     const issues = await this.loadIssues();
-    const issue = issues.find((candidate) => candidate.issueId === issueId);
+    const issue = issues.find(
+      (candidate) =>
+        candidate.issueId === issueId && projectIds.includes(candidate.projectId),
+    );
 
     if (!issue) {
       throw new NotFoundException(`Issue ${issueId} was not found`);

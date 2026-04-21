@@ -545,6 +545,109 @@ input {
   gap: 1rem;
 }
 
+.project-workspace {
+  display: grid;
+  gap: 22px;
+}
+
+.project-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.project-headline {
+  max-width: 760px;
+}
+
+.project-create-form {
+  display: flex;
+  gap: 10px;
+  width: min(100%, 440px);
+}
+
+.project-name-input {
+  min-width: 0;
+}
+
+.project-tabs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.project-tab {
+  display: grid;
+  gap: 5px;
+  min-width: 190px;
+  padding: 13px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.64);
+  color: var(--muted);
+}
+
+.project-tab span,
+.project-tab small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-tab-active {
+  background: #1e1a17;
+  color: #fffaf2;
+}
+
+.project-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.35fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.project-credentials,
+.project-errors {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 26px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.credential-row {
+  display: grid;
+  gap: 7px;
+}
+
+.credential-row span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.credential-row code,
+.sdk-snippet {
+  overflow-x: auto;
+  border-radius: 18px;
+  background: #1e1a17;
+  color: #f8efe2;
+}
+
+.credential-row code {
+  padding: 12px 14px;
+}
+
+.sdk-snippet {
+  margin: 0;
+  padding: 16px;
+  line-height: 1.5;
+}
+
 .inline-link {
   color: #8a3f12;
   text-decoration: underline;
@@ -575,6 +678,19 @@ input {
 
   .detail-block-full {
     grid-column: auto;
+  }
+
+  .project-toolbar,
+  .project-create-form {
+    flex-direction: column;
+  }
+
+  .project-create-form {
+    width: 100%;
+  }
+
+  .project-detail-layout {
+    grid-template-columns: 1fr;
   }
 
   .issue-detail-header,

@@ -3,8 +3,10 @@ import {
   Get,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { JwtUser } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { IssuesService } from './issues.service';
 
@@ -14,9 +16,9 @@ export class IssuesController {
   constructor(private readonly issuesService: IssuesService) {}
 
   @Get()
-  async listIssues() {
+  async listIssues(@Req() request: { user?: JwtUser }) {
     return {
-      issues: await this.issuesService.listIssues(),
+      issues: await this.issuesService.listIssues(request.user!.projectIds),
     };
   }
 
@@ -26,17 +28,23 @@ export class IssuesController {
   }
 
   @Get('grouping/current')
-  async getCurrentGrouping() {
-    return this.issuesService.getCurrentGrouping();
+  async getCurrentGrouping(@Req() request: { user?: JwtUser }) {
+    return this.issuesService.getCurrentGrouping(request.user!.projectIds);
   }
 
   @Get(':id')
-  async getIssueDetail(@Param('id') issueId: string) {
-    return this.issuesService.getIssueDetail(issueId);
+  async getIssueDetail(
+    @Param('id') issueId: string,
+    @Req() request: { user?: JwtUser },
+  ) {
+    return this.issuesService.getIssueDetail(issueId, request.user!.projectIds);
   }
 
   @Post(':id/analysis')
-  async analyzeIssue(@Param('id') issueId: string) {
-    return this.issuesService.analyzeIssue(issueId);
+  async analyzeIssue(
+    @Param('id') issueId: string,
+    @Req() request: { user?: JwtUser },
+  ) {
+    return this.issuesService.analyzeIssue(issueId, request.user!.projectIds);
   }
 }

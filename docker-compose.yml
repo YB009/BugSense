@@ -18,6 +18,25 @@ services:
       retries: 10
       start_period: 10s
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: bugsense-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bugsense
+      POSTGRES_USER: bugsense
+      POSTGRES_PASSWORD: bugsense
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bugsense -d bugsense"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   clickhouse:
     image: clickhouse/clickhouse-server:25.3
     container_name: bugsense-clickhouse
@@ -79,6 +98,8 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       BUGSENSE_ISSUES_STORAGE_PATH: /app/storage/issues/grouped-issues.json
+      BUGSENSE_API_GATEWAY_URL: http://api-gateway:3000
+      BUGSENSE_INTERNAL_SERVICE_TOKEN: ${BUGSENSE_INTERNAL_SERVICE_TOKEN:-dev-only-internal-token}
     ports:
       - "3002:3002"
     volumes:
@@ -172,6 +193,9 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       BUGSENSE_ISSUES_STORAGE_PATH: /app/storage/issues/grouped-issues.json
+      DATABASE_URL: postgres://bugsense:bugsense@postgres:5432/bugsense
+      DATABASE_SSL: "false"
+      BUGSENSE_INTERNAL_SERVICE_TOKEN: ${BUGSENSE_INTERNAL_SERVICE_TOKEN:-dev-only-internal-token}
       BUGSENSE_DASHBOARD_URL: http://localhost:3005
       BUGSENSE_ALLOWED_ORIGINS: http://localhost:3005,http://localhost:4173
     ports:
@@ -180,6 +204,8 @@ services:
       - bugsense_storage:/app/storage
     depends_on:
       clickhouse:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
       ingestion-service:
         condition: service_healthy
@@ -229,5 +255,6 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
   clickhouse_data:
   bugsense_storage:

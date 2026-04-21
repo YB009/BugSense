@@ -19,8 +19,10 @@ export class SseService {
     this.feed.next(event);
   }
 
-  createErrorStream(): Observable<MessageEvent> {
+  createErrorStream(projectIds: string[]): Observable<MessageEvent> {
+    const allowedProjectIds = new Set(projectIds);
     const bootstrap = this.recentEvents
+      .filter((event) => allowedProjectIds.has(event.projectId))
       .slice()
       .reverse()
       .map((event) => ({
@@ -33,11 +35,16 @@ export class SseService {
       this.feed.asObservable().pipe((source) =>
         new Observable<MessageEvent>((subscriber) =>
           source.subscribe({
-            next: (event) =>
+            next: (event) => {
+              if (!allowedProjectIds.has(event.projectId)) {
+                return;
+              }
+
               subscriber.next({
                 type: 'error-event',
                 data: event,
-              }),
+              });
+            },
             error: (error) => subscriber.error(error),
             complete: () => subscriber.complete(),
           }),
@@ -46,7 +53,11 @@ export class SseService {
     );
   }
 
-  async getRecentErrors(): Promise<LiveErrorEvent[]> {
+  async getRecentErrors(projectIds: string[]): Promise<LiveErrorEvent[]> {
+    if (projectIds.length === 0) {
+      return [];
+    }
+
     const query = `
       SELECT
         event_id,
@@ -59,6 +70,7 @@ export class SseService {
         toString(received_at) AS received_at_text
       FROM ${this.config.clickhouseDb}.error_events
       WHERE received_at >= toStartOfDay(now())
+        AND project_id IN (${projectIds.map(toClickHouseStringLiteral).join(', ')})
       ORDER BY received_at DESC
       LIMIT ${RECENT_ERROR_LIMIT}
       FORMAT JSONEachRow
@@ -109,6 +121,10 @@ export class SseService {
 
     return headers;
   }
+}
+
+function toClickHouseStringLiteral(value: string) {
+  return `'${value.replaceAll("'", "\\'")}'`;
 }
 
 function normalizeLevel(level: string): LiveErrorEvent['level'] {

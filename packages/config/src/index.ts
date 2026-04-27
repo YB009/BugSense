@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import net from 'net';
 import { dirname, join } from 'path';
 
 interface LoadEnvOptions {
@@ -36,6 +38,69 @@ export function resolveWorkspacePath(...segments: string[]) {
 
 export function resolveWorkspaceRoot() {
   return findWorkspaceRoot(process.cwd());
+}
+
+export async function resolveDevHttpPort(options: {
+  serviceName: string;
+  preferredPort: number;
+  explicitPort?: boolean;
+  host?: string;
+  maxPortOffset?: number;
+}) {
+  const {
+    serviceName,
+    preferredPort,
+    explicitPort = false,
+    host = '127.0.0.1',
+    maxPortOffset = 20,
+  } = options;
+
+  const maxPort = preferredPort + maxPortOffset;
+  for (let port = preferredPort; port <= maxPort; port += 1) {
+    if (explicitPort && port !== preferredPort) {
+      break;
+    }
+
+    if (await isPortAvailable(port)) {
+      await writeDevPortRegistry({
+        [serviceName]: {
+          host,
+          port,
+        },
+      });
+      return port;
+    }
+  }
+
+  return null;
+}
+
+export async function registerDevServicePort(options: {
+  serviceName: string;
+  host?: string;
+  port: number;
+}) {
+  const { serviceName, host = '127.0.0.1', port } = options;
+  await writeDevPortRegistry({
+    [serviceName]: {
+      host,
+      port,
+    },
+  });
+}
+
+export function getRegisteredDevServiceUrl(
+  serviceName: string,
+  fallbackUrl: string,
+) {
+  const registry = readDevPortRegistry();
+  const registered = registry[serviceName];
+
+  if (!registered?.port) {
+    return fallbackUrl;
+  }
+
+  return `http://${registered.host ?? '127.0.0.1'}:${registered.port}`;
 }
 
 export function parseProjectApiKeys(
@@ -107,6 +172,83 @@ function findWorkspaceRoot(startDir: string) {
 
     currentDir = parentDir;
   }
+}
+
+async function isPortAvailable(port: number) {
+  const ipv6Result = await canListenOnPort(port, '::');
+  if (ipv6Result !== 'unsupported') {
+    return ipv6Result;
+  }
+
+  return canListenOnPort(port, '0.0.0.0');
+}
+
+function canListenOnPort(port: number, host: string) {
+  return new Promise<boolean | 'unsupported'>((resolve) => {
+    const server = net.createServer();
+
+    server.once('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EAFNOSUPPORT') {
+        resolve('unsupported');
+        return;
+      }
+
+      resolve(false);
+    });
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+
+    server.listen(port, host);
+  });
+}
+
+function getDevPortRegistryPath() {
+  return resolveWorkspacePath('.dev', 'ports.json');
+}
+
+function readDevPortRegistry(): Record<string, { host?: string; port: number }> {
+  const registryPath = getDevPortRegistryPath();
+  if (!existsSync(registryPath)) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(readFileSync(registryPath, 'utf8')) as Record<
+      string,
+      { host?: string; port: number }
+    >;
+  } catch {
+    return {};
+  }
+}
+
+async function writeDevPortRegistry(
+  patch: Record<string, { host?: string; port: number }>,
+) {
+  const registryPath = getDevPortRegistryPath();
+  await mkdir(dirname(registryPath), { recursive: true });
+
+  let current: Record<string, { host?: string; port: number }> = {};
+  try {
+    const raw = await readFile(registryPath, 'utf8');
+    current = JSON.parse(raw) as Record<string, { host?: string; port: number }>;
+  } catch {
+    current = {};
+  }
+
+  await writeFile(
+    registryPath,
+    JSON.stringify(
+      {
+        ...current,
+        ...patch,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
 }
 
 function stripQuotes(value: string) {

@@ -19,43 +19,69 @@ export interface ProjectErrorEvent {
 }
 
 export async function fetchProjects(): Promise<DashboardProject[]> {
-  const token = await getDashboardAccessToken();
-  if (!token) {
+  try {
+    const token = await getDashboardAccessToken();
+    if (!token) {
+      return [];
+    }
+
+    const response = await fetch(`${getDashboardApiUrl()}/projects`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as
+      | { projects?: DashboardProject[]; data?: DashboardProject[] }
+      | DashboardProject[];
+
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return payload.projects ?? payload.data ?? [];
+  } catch (error) {
+    console.error('Failed to fetch projects:', error);
     return [];
   }
-
-  const response = await fetch(`${getDashboardApiUrl()}/projects`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const payload = (await response.json()) as { projects?: DashboardProject[] };
-  return payload.projects ?? [];
 }
 
 export async function fetchRecentProjectErrors(): Promise<ProjectErrorEvent[]> {
-  const token = await getDashboardAccessToken();
-  if (!token) {
+  try {
+    const token = await getDashboardAccessToken();
+    if (!token) {
+      return [];
+    }
+
+    const url = new URL('/sse/errors/recent', getDashboardApiUrl());
+    url.searchParams.set('token', token);
+
+    const response = await fetch(url.toString(), {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as
+      | { events?: ProjectErrorEvent[]; data?: ProjectErrorEvent[] }
+      | ProjectErrorEvent[];
+
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return payload.events ?? payload.data ?? [];
+  } catch (error) {
+    console.error('Failed to fetch recent project errors:', error);
     return [];
   }
-
-  const url = new URL('/sse/errors/recent', getDashboardApiUrl());
-  url.searchParams.set('token', token);
-
-  const response = await fetch(url.toString(), {
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const payload = (await response.json()) as { events?: ProjectErrorEvent[] };
-  return payload.events ?? [];
 }

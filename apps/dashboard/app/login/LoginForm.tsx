@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { loginAction, type LoginActionState } from './actions';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 
 const initialState: LoginActionState = {};
 
@@ -15,8 +17,7 @@ export function LoginForm() {
         <label className="field-label" htmlFor="email">
           Email
         </label>
-        <input
-          className="field-input"
+        <Input
           id="email"
           name="email"
           type="email"
@@ -29,8 +30,7 @@ export function LoginForm() {
         <label className="field-label" htmlFor="password">
           Password
         </label>
-        <input
-          className="field-input"
+        <Input
           id="password"
           name="password"
           type="password"
@@ -51,8 +51,8 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button className="primary-button" type="submit" disabled={pending}>
+    <Button loading={pending} size="lg" type="submit">
       {pending ? 'Signing in...' : 'Sign in'}
-    </button>
+    </Button>
   );
 }

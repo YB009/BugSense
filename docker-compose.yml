@@ -88,9 +88,9 @@ services:
       - path: ./apps/alert-service/.env
         required: false
     environment:
-      PORT: 3002
+      ALERT_HTTP_PORT: 3003
+      ALERT_TCP_PORT: 3002
       TCP_HOST: 0.0.0.0
-      TCP_PORT: 4002
       REDIS_HOST: redis
       REDIS_PORT: 6379
       CLICKHOUSE_URL: http://clickhouse:8123
@@ -101,7 +101,7 @@ services:
       BUGSENSE_API_GATEWAY_URL: http://api-gateway:3000
       BUGSENSE_INTERNAL_SERVICE_TOKEN: ${BUGSENSE_INTERNAL_SERVICE_TOKEN:-dev-only-internal-token}
     ports:
-      - "3002:3002"
+      - "3003:3003"
     volumes:
       - bugsense_storage:/app/storage
     depends_on:
@@ -113,7 +113,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -qO- http://127.0.0.1:3002/rules/health >/dev/null 2>&1 || exit 1"
+          "wget -qO- http://127.0.0.1:3003/rules/health >/dev/null 2>&1 || exit 1"
         ]
       interval: 15s
       timeout: 5s
@@ -187,7 +187,7 @@ services:
       TCP_PORT: 4000
       INGESTION_TCP_HOST: ingestion-service
       INGESTION_TCP_PORT: 4001
-      ALERT_SERVICE_URL: http://alert-service:3002
+      ALERT_SERVICE_URL: http://alert-service:3003
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-bugsense}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}

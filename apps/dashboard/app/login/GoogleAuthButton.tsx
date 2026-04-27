@@ -32,11 +32,16 @@ export function GoogleAuthButton({
 }) {
   const router = useRouter();
   const buttonRef = useRef<HTMLDivElement | null>(null);
+  const mountedRef = useRef(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!clientId || !buttonRef.current) {
-      return;
+      return () => {
+        mountedRef.current = false;
+      };
     }
 
     const existingScript = document.querySelector<HTMLScriptElement>(
@@ -52,6 +57,10 @@ export function GoogleAuthButton({
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async ({ credential }) => {
+          if (!mountedRef.current) {
+            return;
+          }
+
           setError('');
 
           const response = await fetch('/auth/google', {
@@ -61,6 +70,10 @@ export function GoogleAuthButton({
             },
             body: JSON.stringify({ credential }),
           });
+
+          if (!mountedRef.current) {
+            return;
+          }
 
           if (!response.ok) {
             setError('Google sign-in failed.');
@@ -76,7 +89,7 @@ export function GoogleAuthButton({
         theme: 'outline',
         size: 'large',
         text: label,
-        width: 320,
+        width: 260,
       });
     };
 
@@ -84,6 +97,7 @@ export function GoogleAuthButton({
       existingScript.addEventListener('load', initialize, { once: true });
       initialize();
       return () => {
+        mountedRef.current = false;
         existingScript.removeEventListener('load', initialize);
       };
     }
@@ -97,9 +111,10 @@ export function GoogleAuthButton({
     document.head.appendChild(script);
 
     return () => {
+      mountedRef.current = false;
       script.removeEventListener('load', initialize);
     };
-  }, [label, router]);
+  }, [clientId, label, router]);
 
   if (!clientId) {
     return null;
@@ -107,7 +122,9 @@ export function GoogleAuthButton({
 
   return (
     <div className="social-auth">
-      <div className="google-button-shell" ref={buttonRef} />
+      <div className="flex justify-center">
+        <div ref={buttonRef} className="flex justify-center" />
+      </div>
       <div className="status-note">{error}</div>
     </div>
   );

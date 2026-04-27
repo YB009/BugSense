@@ -1,6 +1,11 @@
 'use client';
 
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
+import { feedItemMotion, listStagger } from '../../lib/motion';
+import { Badge } from './ui/Badge';
+import { LivePill } from './ui/LivePill';
+import { Skeleton } from './ui/Skeleton';
 
 interface LiveErrorEvent {
   eventId: string;
@@ -26,6 +31,7 @@ export function LiveErrorFeed({ apiUrl, token }: LiveErrorFeedProps) {
   const [status, setStatus] = useState<'connecting' | 'live' | 'offline'>(
     'connecting',
   );
+  const reducedMotion = useReducedMotion();
 
   const streamUrl = useMemo(() => {
     const url = new URL('/sse/errors', apiUrl);
@@ -82,50 +88,88 @@ export function LiveErrorFeed({ apiUrl, token }: LiveErrorFeedProps) {
   }, [streamUrl]);
 
   return (
-    <section className="feed-card">
+    <section className="feed-card bg-transparent p-6">
       <div className="feed-header">
         <div>
-          <p className="eyebrow">SSE Feed</p>
+          <p className="eyebrow">Live stream</p>
           <h3 className="feed-title">Live errors</h3>
-          {events.length > 0 ? (
-            <p className="muted">{events.length} event(s) since midnight.</p>
-          ) : null}
+          <p className="muted">
+            {events.length > 0
+              ? `${events.length} event(s) since midnight.`
+              : 'Waiting for your next runtime signal.'}
+          </p>
         </div>
-        <div className={`feed-status feed-status-${status}`}>
-          <span className="feed-status-dot" />
-          <span>{status}</span>
-        </div>
+        <LivePill status={status} />
       </div>
-      {events.length === 0 ? (
-        <p className="muted">
-          Waiting for new errors. Trigger an ingest event and it will appear here
-          in real time.
-        </p>
-      ) : (
-        <div className="feed-list">
-          {events.map((event) => (
-            <article className="feed-item" key={event.eventId}>
-              <div className="feed-item-top">
-                <span className={`feed-level feed-level-${event.level}`}>
-                  {event.level}
-                </span>
-                <span className="feed-meta">
-                  {event.platform} - {event.environment}
-                </span>
+      {events.length === 0 && status === 'connecting' ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div className="rounded-2xl border border-border bg-panel-strong/70 p-4" key={index}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-4 w-28 rounded-full" />
               </div>
-              <p className="feed-message">{event.message}</p>
-              <p className="feed-detail">
-                {event.exceptionType ?? 'UnknownError'} - {event.projectId}
-              </p>
-              <p className="feed-timestamp">
-                {new Date(event.receivedAt).toLocaleString()}
-              </p>
-            </article>
+              <Skeleton className="mb-2 h-5 w-4/5 rounded-xl" />
+              <Skeleton className="mb-2 h-4 w-2/5 rounded-xl" />
+              <Skeleton className="h-4 w-40 rounded-xl" />
+            </div>
           ))}
         </div>
+      ) : events.length === 0 ? (
+        <p className="muted">
+          Trigger an ingest event and it will appear here in real time without leaving the dashboard.
+        </p>
+      ) : (
+        <motion.div
+          animate="animate"
+          className="feed-list"
+          initial={false}
+          variants={listStagger}
+        >
+          <AnimatePresence initial={false}>
+            {events.map((event) => (
+              <motion.article
+                key={event.eventId}
+                layout={!reducedMotion}
+                className="feed-item"
+                {...feedItemMotion}
+              >
+                <div className="feed-item-top">
+                  <div className="flex items-center gap-3">
+                    <span className={`feed-level feed-level-${event.level}`}>
+                      {event.level}
+                    </span>
+                    <span className="font-mono text-xs uppercase tracking-[0.24em] text-muted-foreground">
+                      {formatTime(event.receivedAt)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="info">{event.platform}</Badge>
+                    <Badge variant="neutral">{event.environment}</Badge>
+                  </div>
+                </div>
+                <p className="feed-message">{event.message}</p>
+                <p className="feed-detail">
+                  {event.exceptionType ?? 'UnknownError'} - {event.projectId}
+                </p>
+                <p className="feed-timestamp">
+                  {new Date(event.receivedAt).toLocaleString()}
+                </p>
+              </motion.article>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       )}
     </section>
   );
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(new Date(value));
 }
 
 function readTodayEvents() {

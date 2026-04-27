@@ -11,7 +11,7 @@ export function getApiGatewayRuntimeConfig() {
     port: parsePort(process.env.PORT, 3000),
     dashboardOrigin: process.env.BUGSENSE_DASHBOARD_URL ?? 'http://localhost:3005',
     allowedOrigins,
-    alertServiceUrl: process.env.ALERT_SERVICE_URL ?? 'http://127.0.0.1:3002',
+    alertServiceUrl: process.env.ALERT_SERVICE_URL ?? 'http://127.0.0.1:3003',
     tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
     tcpPort: parsePort(process.env.TCP_PORT, 4000),
     ingestionTcpHost: process.env.INGESTION_TCP_HOST ?? '127.0.0.1',

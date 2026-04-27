@@ -1,10 +1,18 @@
 import {
   Injectable,
+  ConflictException,
   InternalServerErrorException,
   OnModuleDestroy,
   OnModuleInit,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { createHash, randomBytes, randomUUID } from 'crypto';
+import {
+  createHash,
+  randomBytes,
+  randomUUID,
+  scryptSync,
+  timingSafeEqual,
+} from 'crypto';
 import { Pool, QueryResultRow } from 'pg';
 import { getApiGatewayRuntimeConfig } from '../config/runtime-config';
 
@@ -76,6 +84,79 @@ export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
     }
 
     return this.getUserWithProjects(user.id);
+  }
+
+  async createPasswordUserWithDefaultProject(input: {
+    email: string;
+    password: string;
+    name?: string | null;
+  }) {
+    const email = normalizeEmail(input.email);
+    const existingUser = await this.getUserAuthRecordByEmail(email);
+
+    if (existingUser?.password_hash) {
+      throw new ConflictException('An account already exists for this email');
+    }
+
+    if (existingUser && existingUser.auth_provider === 'google') {
+      throw new ConflictException(
+        'This email is already registered with Google sign-in',
+      );
+    }
+
+    const now = new Date().toISOString();
+    const userId = existingUser?.id ?? stableUserId(email);
+    const passwordHash = hashPassword(input.password);
+
+    await this.query(
+      `
+        INSERT INTO bugsense_users (
+          id,
+          email,
+          name,
+          auth_provider,
+          password_hash,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, 'password', $4, $5, $5)
+        ON CONFLICT (email)
+        DO UPDATE SET
+          name = COALESCE(EXCLUDED.name, bugsense_users.name),
+          auth_provider = 'password',
+          password_hash = EXCLUDED.password_hash,
+          updated_at = EXCLUDED.updated_at
+      `,
+      [userId, email, input.name ?? null, passwordHash, now],
+    );
+
+    const user = await this.getUserByEmail(email);
+    if (!user) {
+      throw new InternalServerErrorException('Failed to create workspace user');
+    }
+
+    const projects = await this.getProjectsForUser(user.id);
+    if (projects.length === 0) {
+      await this.createProjectForUser(user.id, {
+        name: `${user.email.split('@')[0] || 'User'} project`,
+      });
+    }
+
+    return this.getUserWithProjects(user.id);
+  }
+
+  async authenticatePasswordUser(email: string, password: string) {
+    const record = await this.getUserAuthRecordByEmail(normalizeEmail(email));
+
+    if (!record?.password_hash) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!verifyPassword(password, record.password_hash)) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    return this.getUserWithProjects(record.id);
   }
 
   async getUserWithProjects(userId: string) {
@@ -169,6 +250,20 @@ export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
     return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
+  private async getUserAuthRecordByEmail(email: string) {
+    const result = await this.query<UserAuthRow>(
+      `
+        SELECT id, email, auth_provider, password_hash
+        FROM bugsense_users
+        WHERE email = $1
+        LIMIT 1
+      `,
+      [email],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   private async getUserById(userId: string) {
     const result = await this.query<UserRow>(
       'SELECT * FROM bugsense_users WHERE id = $1 LIMIT 1',
@@ -220,9 +315,14 @@ export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
         email TEXT NOT NULL UNIQUE,
         name TEXT,
         auth_provider TEXT NOT NULL,
+        password_hash TEXT,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL
       )
+    `);
+    await this.query(`
+      ALTER TABLE bugsense_users
+      ADD COLUMN IF NOT EXISTS password_hash TEXT
     `);
     await this.query(`
       CREATE TABLE IF NOT EXISTS bugsense_projects (
@@ -284,6 +384,13 @@ interface UserRow {
   updated_at: Date;
 }
 
+interface UserAuthRow {
+  id: string;
+  email: string;
+  auth_provider: WorkspaceUser['authProvider'];
+  password_hash: string | null;
+}
+
 interface ProjectRow {
   id: string;
   name: string;
@@ -310,4 +417,26 @@ function normalizeEmail(email: string) {
 
 function stableUserId(email: string) {
   return `user_${createHash('sha256').update(email).digest('hex').slice(0, 24)}`;
+}
+
+function hashPassword(password: string) {
+  const salt = randomBytes(16).toString('hex');
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password: string, encodedHash: string) {
+  const [salt, storedHash] = encodedHash.split(':');
+  if (!salt || !storedHash) {
+    return false;
+  }
+
+  const candidate = scryptSync(password, salt, 64);
+  const expected = Buffer.from(storedHash, 'hex');
+
+  if (candidate.length !== expected.length) {
+    return false;
+  }
+
+  return timingSafeEqual(candidate, expected);
 }

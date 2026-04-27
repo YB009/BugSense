@@ -9,7 +9,12 @@ export default async function GroupingPage() {
     return null;
   }
 
-  const initialResult = await fetchCurrentGrouping();
+  let initialResult = null;
+  try {
+    initialResult = await fetchCurrentGrouping();
+  } catch (error) {
+    console.error('Failed to fetch current grouping:', error);
+  }
 
   return (
     <GroupingRunner

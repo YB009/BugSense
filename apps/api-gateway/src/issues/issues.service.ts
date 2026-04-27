@@ -3,6 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { getRegisteredDevServiceUrl } from '@bugsense/config';
 import {
   GroupedIssue,
   IssueAnalysisResult,
@@ -146,8 +147,12 @@ export class IssuesService {
   }
 
   async runGrouping(): Promise<IssueGroupingRunResult> {
+    const alertServiceUrl = getRegisteredDevServiceUrl(
+      'alert-service',
+      this.config.alertServiceUrl,
+    );
     const response = await fetch(
-      `${this.config.alertServiceUrl}/issues/grouping/run`,
+      `${alertServiceUrl}/issues/grouping/run`,
       {
         method: 'POST',
         headers: {

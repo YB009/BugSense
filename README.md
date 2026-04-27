@@ -199,4 +199,4 @@ Concretely, the repo still needs:
 
 ## License
 
-No license has been added yet.
+MIT

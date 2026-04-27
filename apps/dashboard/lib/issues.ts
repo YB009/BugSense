@@ -50,24 +50,37 @@ export interface IssueGroupingRunResult {
 }
 
 export async function fetchIssues(): Promise<IssueListItem[]> {
-  const token = await getDashboardAccessToken();
-  if (!token) {
+  try {
+    const token = await getDashboardAccessToken();
+    if (!token) {
+      return [];
+    }
+
+    const response = await fetch(`${getDashboardApiUrl()}/issues`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as
+      | { issues?: IssueListItem[]; data?: IssueListItem[] }
+      | IssueListItem[];
+
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return payload.issues ?? payload.data ?? [];
+  } catch (error) {
+    console.error('Failed to fetch issues:', error);
     return [];
   }
-
-  const response = await fetch(`${getDashboardApiUrl()}/issues`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const payload = (await response.json()) as { issues?: IssueListItem[] };
-  return payload.issues ?? [];
 }
 
 export async function fetchIssueDetail(issueId: string): Promise<IssueDetail> {

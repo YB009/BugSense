@@ -7,6 +7,11 @@ interface LoginRequest {
   password?: string;
 }
 
+interface SignupRequest {
+  email?: string;
+  password?: string;
+}
+
 interface GoogleLoginRequest {
   credential?: string;
 }
@@ -18,6 +23,11 @@ export class AuthController {
   @Post('login')
   async login(@Body() payload: LoginRequest) {
     return this.authService.login(payload.email, payload.password);
+  }
+
+  @Post('signup')
+  async signup(@Body() payload: SignupRequest) {
+    return this.authService.signup(payload.email, payload.password);
   }
 
   @Post('google')

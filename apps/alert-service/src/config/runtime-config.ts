@@ -12,9 +12,9 @@ export function getAlertRuntimeConfig() {
   );
 
   return {
-    port: parsePort(process.env.PORT, 3002),
-    tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
-    tcpPort: parsePort(process.env.TCP_PORT, 4002),
+    port: parsePort(process.env.ALERT_HTTP_PORT ?? process.env.PORT, 3003),
+    tcpHost: process.env.TCP_HOST ?? '0.0.0.0',
+    tcpPort: parsePort(process.env.ALERT_TCP_PORT ?? process.env.TCP_PORT, 3002),
     clickhouseUrl: process.env.CLICKHOUSE_URL ?? 'http://127.0.0.1:8123',
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,

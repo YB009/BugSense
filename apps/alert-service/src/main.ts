@@ -1,4 +1,4 @@
-import { loadEnvFiles } from '@bugsense/config';
+import { loadEnvFiles, registerDevServicePort } from '@bugsense/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { getAlertRuntimeConfig } from './config/runtime-config';
@@ -17,7 +17,11 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.listen(config.port, '::');
+  await app.listen(config.port, '0.0.0.0');
+  await registerDevServicePort({
+    serviceName: 'alert-service',
+    port: config.port,
+  });
 }
 
 void bootstrap();

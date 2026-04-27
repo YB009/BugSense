@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -21,19 +23,89 @@ export class AuthService {
   ) {}
 
   async login(email: string | undefined, password: string | undefined) {
+    if (!email || !password) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
     const config = getApiGatewayRuntimeConfig();
 
     if (
       email !== config.dashboardAdminEmail ||
       password !== config.dashboardAdminPassword
     ) {
-      throw new UnauthorizedException('Invalid email or password');
+      const workspace = await this.workspaceStore.authenticatePasswordUser(
+        email,
+        password,
+      );
+
+      if (!workspace) {
+        throw new UnauthorizedException('Invalid email or password');
+      }
+
+      const user: JwtUser = {
+        sub: workspace.user.id,
+        email: workspace.user.email,
+        role: 'admin',
+        projectIds: workspace.projects.map((project) => project.id),
+      };
+
+      return {
+        ...(await this.issueAccessToken(user)),
+        authProvider: 'password',
+      };
     }
 
     const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
       email,
       authProvider: 'password',
     });
+
+    const user: JwtUser = {
+      sub: workspace!.user.id,
+      email: workspace!.user.email,
+      role: 'admin',
+      projectIds: workspace!.projects.map((project) => project.id),
+    };
+
+    return {
+      ...(await this.issueAccessToken(user)),
+      authProvider: 'password',
+    };
+  }
+
+  async signup(email: string | undefined, password: string | undefined) {
+    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedPassword = password?.trim();
+
+    if (!normalizedEmail || !normalizedPassword) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new BadRequestException('Enter a valid email address');
+    }
+
+    if (normalizedPassword.length < 8) {
+      throw new BadRequestException(
+        'Password must be at least 8 characters long',
+      );
+    }
+
+    let workspace;
+    try {
+      workspace = await this.workspaceStore.createPasswordUserWithDefaultProject(
+        {
+          email: normalizedEmail,
+          password: normalizedPassword,
+        },
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+
+      throw error;
+    }
 
     const user: JwtUser = {
       sub: workspace!.user.id,

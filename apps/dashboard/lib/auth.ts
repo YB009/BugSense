@@ -9,7 +9,17 @@ export interface DashboardUser {
 }
 
 export function getDashboardApiUrl() {
-  return process.env.BUGSENSE_API_URL ?? 'http://localhost:3000';
+  const value = process.env.BUGSENSE_API_URL?.trim();
+
+  if (!value) {
+    throw new Error('BUGSENSE_API_URL is required');
+  }
+
+  try {
+    return new URL(value).toString().replace(/\/$/, '');
+  } catch {
+    throw new Error('BUGSENSE_API_URL must be a valid URL');
+  }
 }
 
 export function getDashboardTokenCookieName() {

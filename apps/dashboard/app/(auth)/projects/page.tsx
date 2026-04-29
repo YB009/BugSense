@@ -6,6 +6,7 @@ import {
   type DashboardProject,
   type ProjectErrorEvent,
 } from '../../../lib/projects';
+import { getDashboardApiUrl } from '../../../lib/auth';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -20,6 +21,7 @@ interface ProjectsPageProps {
 }
 
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+  const ingestEndpoint = `${getDashboardApiUrl()}/ingest`;
   const [paramsResult, projectsResult, errorsResult] = await Promise.allSettled([
     searchParams,
     fetchProjects(),
@@ -100,10 +102,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </nav>
 
           {selectedProject ? (
-            <SelectedProjectPanel
-              errors={selectedErrors}
-              project={selectedProject}
-            />
+      <SelectedProjectPanel
+        errors={selectedErrors}
+        ingestEndpoint={ingestEndpoint}
+        project={selectedProject}
+      />
           ) : null}
         </>
       )}
@@ -114,9 +117,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 function SelectedProjectPanel({
   project,
   errors,
+  ingestEndpoint,
 }: {
   project: DashboardProject;
   errors: ProjectErrorEvent[];
+  ingestEndpoint: string;
 }) {
   return (
     <div className="project-detail-layout">
@@ -156,7 +161,7 @@ function SelectedProjectPanel({
 const bugsense = new BugSense({
   projectId: '${project.id}',
   apiKey: '${project.apiKey}',
-  endpoint: 'https://bugsenseapi-gateway-production.up.railway.app/ingest',
+  endpoint: '${ingestEndpoint}',
   environment: 'production',
   release: '1.0.0',
 });`}</pre>

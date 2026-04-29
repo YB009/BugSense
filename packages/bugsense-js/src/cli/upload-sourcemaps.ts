@@ -34,7 +34,7 @@ program
   .option(
     '--endpoint <endpoint>',
     'BugSense sourcemap upload endpoint',
-    'http://localhost:3000/sourcemaps',
+    process.env.BUGSENSE_SOURCEMAPS_URL,
   )
   .option(
     '--api-key <apiKey>',
@@ -63,6 +63,10 @@ if (isCliExecution()) {
 }
 
 export async function uploadSourcemaps(options: UploadSourcemapsOptions) {
+  if (!options.endpoint) {
+    throw new Error('Missing --endpoint or BUGSENSE_SOURCEMAPS_URL');
+  }
+
   if (!options.apiKey) {
     throw new Error('Missing --api-key or BUGSENSE_API_KEY');
   }

@@ -14,9 +14,7 @@ export default function RootLayout({
   children: ReactNode;
   }>) {
   if (!process.env.BUGSENSE_API_URL) {
-    console.error(
-      'BUGSENSE_API_URL is not set for apps/dashboard. Falling back to http://localhost:3000.',
-    );
+    throw new Error('BUGSENSE_API_URL is required for apps/dashboard');
   }
 
   return (

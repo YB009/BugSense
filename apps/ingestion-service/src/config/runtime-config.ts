@@ -7,7 +7,7 @@ export function getIngestionRuntimeConfig() {
     tcpPort: parsePort(process.env.TCP_PORT, 4001),
     alertTcpHost: process.env.ALERT_TCP_HOST ?? '127.0.0.1',
     alertTcpPort: parsePort(process.env.ALERT_TCP_PORT, 4002),
-    clickhouseUrl: process.env.CLICKHOUSE_URL ?? 'http://127.0.0.1:8123',
+    clickhouseUrl: requireUrlEnv('CLICKHOUSE_URL'),
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
@@ -24,6 +24,25 @@ export function getIngestionRuntimeConfig() {
       resolveWorkspacePath('storage', 'sourcemaps'),
     redisConnection: parseRedisConnection(),
   };
+}
+
+function requireEnv(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required`);
+  }
+
+  return value;
+}
+
+function requireUrlEnv(name: string) {
+  const value = requireEnv(name);
+
+  try {
+    return new URL(value).toString().replace(/\/$/, '');
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
 }
 
 function parsePort(value: string | undefined, fallback: number) {

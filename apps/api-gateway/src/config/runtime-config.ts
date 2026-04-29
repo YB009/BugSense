@@ -4,16 +4,15 @@ import { isAbsolute } from 'path';
 
 export function getApiGatewayRuntimeConfig() {
   const allowedOrigins = parseAllowedOrigins(
-    process.env.BUGSENSE_ALLOWED_ORIGINS,
-    ['http://localhost:3005', 'http://localhost:4173'],
+    requireEnv('BUGSENSE_ALLOWED_ORIGINS'),
   );
 
   return {
     port: parsePort(process.env.PORT, 3000),
-    dashboardOrigin: process.env.BUGSENSE_DASHBOARD_URL ?? 'http://localhost:3005',
+    dashboardOrigin: requireUrlEnv('BUGSENSE_DASHBOARD_URL'),
     allowedOrigins,
     alertServiceUrl: normalizeAlertServiceUrl(
-      process.env.ALERT_SERVICE_URL,
+      requireUrlEnv('ALERT_SERVICE_URL'),
       process.env.ALERT_SERVICE_HTTP_PORT,
     ),
     tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
@@ -34,7 +33,7 @@ export function getApiGatewayRuntimeConfig() {
       process.env.BUGSENSE_GOOGLE_ALLOW_SIGNUP,
       false,
     ),
-    clickhouseUrl: process.env.CLICKHOUSE_URL ?? 'http://127.0.0.1:8123',
+    clickhouseUrl: requireUrlEnv('CLICKHOUSE_URL'),
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
@@ -54,6 +53,25 @@ export function getApiGatewayRuntimeConfig() {
       process.env.BUGSENSE_INTERNAL_SERVICE_TOKEN ??
       'dev-only-internal-token',
   };
+}
+
+function requireEnv(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required`);
+  }
+
+  return value;
+}
+
+function requireUrlEnv(name: string) {
+  const value = requireEnv(name);
+
+  try {
+    return new URL(value).toString().replace(/\/$/, '');
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
 }
 
 function resolveIssuesStoragePath(value: string | undefined) {
@@ -77,20 +95,17 @@ function parsePort(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function parseAllowedOrigins(
-  value: string | undefined,
-  fallback: string[],
-) {
-  if (!value) {
-    return fallback;
-  }
-
+function parseAllowedOrigins(value: string) {
   const origins = value
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  return origins.length > 0 ? origins : fallback;
+  if (origins.length === 0) {
+    throw new Error('BUGSENSE_ALLOWED_ORIGINS must contain at least one origin');
+  }
+
+  return origins;
 }
 
 function parseList(value: string | undefined) {
@@ -112,15 +127,9 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
   return value === 'true';
 }
 
-function normalizeAlertServiceUrl(
-  value: string | undefined,
-  alertHttpPort: string | undefined,
-) {
-  const fallback = 'http://127.0.0.1:3003';
-  const raw = value?.trim() || fallback;
-
+function normalizeAlertServiceUrl(value: string, alertHttpPort: string | undefined) {
   try {
-    const parsed = new URL(raw);
+    const parsed = new URL(value);
 
     if (alertHttpPort) {
       parsed.port = alertHttpPort.trim();
@@ -130,7 +139,7 @@ function normalizeAlertServiceUrl(
 
     return parsed.toString().replace(/\/$/, '');
   } catch {
-    return raw;
+    throw new Error('ALERT_SERVICE_URL must be a valid URL');
   }
 }
 

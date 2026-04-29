@@ -16,7 +16,7 @@ export function getAlertRuntimeConfig() {
     port: parsePort(process.env.ALERT_HTTP_PORT ?? process.env.PORT, 3003),
     tcpHost: process.env.TCP_HOST ?? '0.0.0.0',
     tcpPort: parsePort(process.env.ALERT_TCP_PORT ?? process.env.TCP_PORT, 3002),
-    clickhouseUrl: process.env.CLICKHOUSE_URL ?? 'http://127.0.0.1:8123',
+    clickhouseUrl: requireUrlEnv('CLICKHOUSE_URL'),
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
@@ -42,12 +42,31 @@ export function getAlertRuntimeConfig() {
     alertEmailFrom:
       process.env.BUGSENSE_ALERT_EMAIL_FROM ?? 'Bugsense <alerts@example.com>',
     alertEmailRecipients,
-    apiGatewayUrl: process.env.BUGSENSE_API_GATEWAY_URL ?? 'http://127.0.0.1:3000',
+    apiGatewayUrl: requireUrlEnv('BUGSENSE_API_GATEWAY_URL'),
     internalServiceToken:
       process.env.BUGSENSE_INTERNAL_SERVICE_TOKEN ??
       'dev-only-internal-token',
     redisConnection: parseRedisConnection(),
   };
+}
+
+function requireEnv(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required`);
+  }
+
+  return value;
+}
+
+function requireUrlEnv(name: string) {
+  const value = requireEnv(name);
+
+  try {
+    return new URL(value).toString().replace(/\/$/, '');
+  } catch {
+    throw new Error(`${name} must be a valid URL`);
+  }
 }
 
 function resolveIssuesStoragePath(value: string | undefined) {

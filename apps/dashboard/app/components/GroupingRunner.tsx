@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import type { IssueGroupingRunResult } from '../../lib/issues';
 
 export interface GroupingRunnerProps {
@@ -16,7 +16,7 @@ export function GroupingRunner({
   initialResult,
   token,
 }: GroupingRunnerProps) {
-  const [isPending, startTransition] = useTransition();
+  const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<IssueGroupingRunResult | null>(
     initialResult,
   );
@@ -31,15 +31,22 @@ export function GroupingRunner({
   }, [result]);
 
   function handleRun() {
-    setError(null);
+    if (isRunning) {
+      return;
+    }
 
-    startTransition(async () => {
+    setError(null);
+    setIsRunning(true);
+
+    void (async () => {
       try {
         const response = await fetch(`${apiUrl}/issues/grouping/run`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
+          signal: AbortSignal.timeout(10_000),
         });
 
         if (!response.ok) {
@@ -81,8 +88,10 @@ export function GroupingRunner({
             ? caughtError.message
             : 'Failed to run grouping',
         );
+      } finally {
+        setIsRunning(false);
       }
-    });
+    })();
   }
 
   return (
@@ -97,11 +106,11 @@ export function GroupingRunner({
       <div className="grouping-actions">
         <button
           className="ghost-button"
-          disabled={isPending}
+          disabled={isRunning}
           onClick={handleRun}
           type="button"
         >
-          {isPending ? 'Running...' : 'Run grouping now'}
+          {isRunning ? 'Running...' : 'Run grouping now'}
         </button>
       </div>
       {error ? <p className="muted error-text">{error}</p> : null}

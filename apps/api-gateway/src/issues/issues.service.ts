@@ -266,6 +266,7 @@ export class IssuesService {
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: AbortSignal.timeout(8_000),
       });
 
       if (!response.ok) {

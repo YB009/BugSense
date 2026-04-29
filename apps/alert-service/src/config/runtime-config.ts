@@ -20,6 +20,14 @@ export function getAlertRuntimeConfig() {
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
+    clickhouseRequestTimeoutMs: Math.max(
+      1_000,
+      Number(process.env.CLICKHOUSE_REQUEST_TIMEOUT_MS) || 30_000,
+    ),
+    clickhouseMaxRetries: Math.max(
+      0,
+      Number(process.env.CLICKHOUSE_MAX_RETRIES) || 3,
+    ),
     geminiApiKey: process.env.GEMINI_API_KEY,
     nightlyGroupingModel:
       process.env.BUGSENSE_NIGHTLY_GROUPING_MODEL ?? 'gemma-3-12b-it',

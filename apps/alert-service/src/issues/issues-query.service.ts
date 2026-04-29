@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { GroupingCandidateEvent } from '@bugsense/types';
 import { getAlertRuntimeConfig } from '../config/runtime-config';
@@ -32,23 +33,7 @@ export class IssuesQueryService {
       FORMAT JSONEachRow
     `.trim();
 
-    const response = await fetch(
-      `${this.config.clickhouseUrl}/?query=${encodeURIComponent(query)}`,
-      {
-        method: 'POST',
-        headers: this.buildHeaders(),
-      },
-    );
-
-    if (!response.ok) {
-      const message = await response.text();
-      this.logger.error(`ClickHouse grouping query failed: ${message}`);
-      throw new InternalServerErrorException(
-        `ClickHouse grouping query failed: ${message}`,
-      );
-    }
-
-    const raw = await response.text();
+    const raw = await this.fetchGroupingRows(query);
     return raw
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -69,6 +54,73 @@ export class IssuesQueryService {
       }));
   }
 
+  private async fetchGroupingRows(query: string) {
+    let lastError: unknown = null;
+
+    for (
+      let attempt = 0;
+      attempt <= this.config.clickhouseMaxRetries;
+      attempt += 1
+    ) {
+      try {
+        const response = await fetch(
+          `${this.config.clickhouseUrl}/?query=${encodeURIComponent(query)}`,
+          {
+            method: 'POST',
+            headers: this.buildHeaders(),
+            signal: AbortSignal.timeout(this.config.clickhouseRequestTimeoutMs),
+          },
+        );
+
+        if (!response.ok) {
+          const message = (await response.text()).trim();
+          const normalizedMessage =
+            message || `HTTP ${response.status} ${response.statusText}`;
+
+          if (
+            attempt < this.config.clickhouseMaxRetries &&
+            this.isRetryableStatus(response.status)
+          ) {
+            lastError = new Error(normalizedMessage);
+            await this.delay(300 * (attempt + 1));
+            continue;
+          }
+
+          this.logger.error(
+            `ClickHouse grouping query failed: ${normalizedMessage}`,
+          );
+          throw new InternalServerErrorException(
+            `ClickHouse grouping query failed: ${normalizedMessage}`,
+          );
+        }
+
+        return await response.text();
+      } catch (error) {
+        lastError = error;
+
+        if (
+          attempt < this.config.clickhouseMaxRetries &&
+          this.isRetryableError(error)
+        ) {
+          await this.delay(300 * (attempt + 1));
+          continue;
+        }
+
+        const message = this.describeError(error);
+        this.logger.error(`ClickHouse grouping query failed: ${message}`);
+        throw new ServiceUnavailableException(
+          `ClickHouse grouping query failed: ${message}`,
+        );
+      }
+    }
+
+    const message = this.describeError(lastError);
+    this.logger.error(`ClickHouse grouping query failed: ${message}`);
+    throw new ServiceUnavailableException(
+      `ClickHouse grouping query failed: ${message}`,
+    );
+  }
+
   private buildHeaders() {
     const headers: Record<string, string> = {
       'Content-Type': 'text/plain',
@@ -83,5 +135,34 @@ export class IssuesQueryService {
     }
 
     return headers;
+  }
+
+  private isRetryableStatus(status: number) {
+    return status === 429 || status >= 500;
+  }
+
+  private isRetryableError(error: unknown) {
+    const message = this.describeError(error).toLowerCase();
+
+    return (
+      message.includes('econnreset') ||
+      message.includes('etimedout') ||
+      message.includes('econnrefused') ||
+      message.includes('timeout') ||
+      message.includes('fetch failed') ||
+      message.includes('socket')
+    );
+  }
+
+  private describeError(error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return String(error);
+  }
+
+  private delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

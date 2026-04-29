@@ -43,7 +43,34 @@ export function GroupingRunner({
         });
 
         if (!response.ok) {
-          throw new Error('Failed to run grouping');
+          let message = 'Failed to run grouping';
+
+          try {
+            const contentType = response.headers.get('content-type') ?? '';
+
+            if (contentType.includes('application/json')) {
+              const payload = (await response.json()) as {
+                message?: string | string[];
+                error?: string;
+              };
+              const details = Array.isArray(payload.message)
+                ? payload.message.join(', ')
+                : payload.message || payload.error;
+
+              if (details) {
+                message = String(details);
+              }
+            } else {
+              const text = (await response.text()).trim();
+              if (text) {
+                message = text;
+              }
+            }
+          } catch {
+            // Ignore parse errors and fall back to the generic message.
+          }
+
+          throw new Error(message);
         }
 
         const payload = (await response.json()) as IssueGroupingRunResult;

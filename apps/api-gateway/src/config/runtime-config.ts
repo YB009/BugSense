@@ -12,7 +12,10 @@ export function getApiGatewayRuntimeConfig() {
     port: parsePort(process.env.PORT, 3000),
     dashboardOrigin: process.env.BUGSENSE_DASHBOARD_URL ?? 'http://localhost:3005',
     allowedOrigins,
-    alertServiceUrl: process.env.ALERT_SERVICE_URL ?? 'http://127.0.0.1:3003',
+    alertServiceUrl: normalizeAlertServiceUrl(
+      process.env.ALERT_SERVICE_URL,
+      process.env.ALERT_SERVICE_HTTP_PORT,
+    ),
     tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
     tcpPort: parsePort(process.env.TCP_PORT, 4000),
     ingestionTcpHost: process.env.INGESTION_TCP_HOST ?? '127.0.0.1',
@@ -107,6 +110,28 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
   }
 
   return value === 'true';
+}
+
+function normalizeAlertServiceUrl(
+  value: string | undefined,
+  alertHttpPort: string | undefined,
+) {
+  const fallback = 'http://127.0.0.1:3003';
+  const raw = value?.trim() || fallback;
+
+  try {
+    const parsed = new URL(raw);
+
+    if (alertHttpPort) {
+      parsed.port = alertHttpPort.trim();
+    } else if (parsed.hostname.endsWith('.railway.internal')) {
+      parsed.port = '';
+    }
+
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return raw;
+  }
 }
 
 function normalizeGeminiModel(value: string) {

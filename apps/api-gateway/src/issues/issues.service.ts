@@ -264,24 +264,34 @@ export class IssuesService {
       'alert-service',
       this.config.alertServiceUrl,
     );
-    const response = await fetch(
-      `${alertServiceUrl}/issues/grouping/run`,
-      {
+    try {
+      const response = await fetch(`${alertServiceUrl}/issues/grouping/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-      },
-    );
+      });
 
-    if (!response.ok) {
-      const message = await response.text();
-      throw new InternalServerErrorException(
-        `Failed to run issue grouping: ${message}`,
+      if (!response.ok) {
+        const message = (await response.text()).trim();
+        throw new BadGatewayException(
+          `Failed to run issue grouping via alert-service: ${message || `HTTP ${response.status}`}`,
+        );
+      }
+
+      return (await response.json()) as IssueGroupingRunResult;
+    } catch (error) {
+      if (error instanceof BadGatewayException) {
+        throw error;
+      }
+
+      const message =
+        error instanceof Error ? truncateReason(error.message) : 'unknown_error';
+
+      throw new ServiceUnavailableException(
+        `Failed to reach alert-service at ${alertServiceUrl}/issues/grouping/run: ${message}`,
       );
     }
-
-    return (await response.json()) as IssueGroupingRunResult;
   }
 
   async clearTodayIssues(projectIds: string[]) {

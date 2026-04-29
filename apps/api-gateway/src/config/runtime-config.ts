@@ -11,10 +11,7 @@ export function getApiGatewayRuntimeConfig() {
     port: parsePort(process.env.PORT, 3000),
     dashboardOrigin: requireUrlEnv('BUGSENSE_DASHBOARD_URL'),
     allowedOrigins,
-    alertServiceUrl: normalizeAlertServiceUrl(
-      requireUrlEnv('ALERT_SERVICE_URL'),
-      process.env.ALERT_SERVICE_HTTP_PORT,
-    ),
+    alertServiceUrl: requireUrlEnv('ALERT_SERVICE_URL'),
     tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
     tcpPort: parsePort(process.env.TCP_PORT, 4000),
     ingestionTcpHost: process.env.INGESTION_TCP_HOST ?? '127.0.0.1',
@@ -125,22 +122,6 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
   }
 
   return value === 'true';
-}
-
-function normalizeAlertServiceUrl(value: string, alertHttpPort: string | undefined) {
-  try {
-    const parsed = new URL(value);
-
-    if (alertHttpPort) {
-      parsed.port = alertHttpPort.trim();
-    } else if (parsed.hostname.endsWith('.railway.internal')) {
-      parsed.port = '';
-    }
-
-    return parsed.toString().replace(/\/$/, '');
-  } catch {
-    throw new Error('ALERT_SERVICE_URL must be a valid URL');
-  }
 }
 
 function normalizeGeminiModel(value: string) {

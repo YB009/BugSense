@@ -6,7 +6,6 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { getRegisteredDevServiceUrl } from '@bugsense/config';
 import {
   FinishReason,
   GoogleGenerativeAI,
@@ -260,10 +259,7 @@ export class IssuesService {
   }
 
   async runGrouping(): Promise<IssueGroupingRunResult> {
-    const alertServiceUrl = getRegisteredDevServiceUrl(
-      'alert-service',
-      this.config.alertServiceUrl,
-    );
+    const alertServiceUrl = this.config.alertServiceUrl;
     try {
       const response = await fetch(`${alertServiceUrl}/issues/grouping/run`, {
         method: 'POST',

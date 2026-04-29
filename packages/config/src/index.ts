@@ -9,26 +9,53 @@ interface LoadEnvOptions {
 }
 
 export function loadEnvFiles(options: LoadEnvOptions = {}) {
+  const protectedKeys = new Set(Object.keys(process.env));
   const cwd = process.cwd();
   const workspaceRoot = findWorkspaceRoot(cwd);
-  const candidates = [
-    join(workspaceRoot, '.env'),
-    join(workspaceRoot, '.env.local'),
+  const candidates: Array<{ filePath: string; overrideExisting: boolean }> = [
+    {
+      filePath: join(workspaceRoot, '.env'),
+      overrideExisting: false,
+    },
   ];
+
+  if (options.includeInfraEnv) {
+    candidates.push({
+      filePath: join(workspaceRoot, 'infra', '.env'),
+      overrideExisting: true,
+    });
+  }
+
+  candidates.push(
+    {
+      filePath: join(workspaceRoot, '.env.local'),
+      overrideExisting: true,
+    },
+  );
 
   if (options.serviceName) {
     candidates.push(
-      join(workspaceRoot, 'apps', options.serviceName, '.env'),
-      join(workspaceRoot, 'apps', options.serviceName, '.env.local'),
+      {
+        filePath: join(workspaceRoot, 'apps', options.serviceName, '.env'),
+        overrideExisting: true,
+      },
+      {
+        filePath: join(
+          workspaceRoot,
+          'apps',
+          options.serviceName,
+          '.env.local',
+        ),
+        overrideExisting: true,
+      },
     );
   }
 
-  if (options.includeInfraEnv) {
-    candidates.push(join(workspaceRoot, 'infra', '.env'));
-  }
-
-  for (const filePath of candidates) {
-    loadEnvFile(filePath);
+  for (const candidate of candidates) {
+    loadEnvFile(candidate.filePath, {
+      overrideExisting: candidate.overrideExisting,
+      protectedKeys,
+    });
   }
 }
 
@@ -131,7 +158,13 @@ export function parseProjectApiKeys(
     }, {});
 }
 
-function loadEnvFile(filePath: string) {
+function loadEnvFile(
+  filePath: string,
+  options: {
+    overrideExisting: boolean;
+    protectedKeys: Set<string>;
+  },
+) {
   if (!existsSync(filePath)) {
     return;
   }
@@ -151,7 +184,11 @@ function loadEnvFile(filePath: string) {
     const key = trimmed.slice(0, separatorIndex).trim();
     const value = stripQuotes(trimmed.slice(separatorIndex + 1).trim());
 
-    if (!(key in process.env)) {
+    if (options.protectedKeys.has(key) && key in process.env) {
+      continue;
+    }
+
+    if (options.overrideExisting || !(key in process.env)) {
       process.env[key] = value;
     }
   }

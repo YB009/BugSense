@@ -20,9 +20,10 @@ export class SseService {
   }
 
   createErrorStream(projectIds: string[]): Observable<MessageEvent> {
+    const allowAllProjects = projectIds.includes('*');
     const allowedProjectIds = new Set(projectIds);
     const bootstrap = this.recentEvents
-      .filter((event) => allowedProjectIds.has(event.projectId))
+      .filter((event) => allowAllProjects || allowedProjectIds.has(event.projectId))
       .slice()
       .reverse()
       .map((event) => ({
@@ -36,7 +37,7 @@ export class SseService {
         new Observable<MessageEvent>((subscriber) =>
           source.subscribe({
             next: (event) => {
-              if (!allowedProjectIds.has(event.projectId)) {
+              if (!allowAllProjects && !allowedProjectIds.has(event.projectId)) {
                 return;
               }
 
@@ -58,6 +59,10 @@ export class SseService {
       return [];
     }
 
+    const projectFilter = projectIds.includes('*')
+      ? ''
+      : `AND project_id IN (${projectIds.map(toClickHouseStringLiteral).join(', ')})`;
+
     const query = `
       SELECT
         event_id,
@@ -70,7 +75,7 @@ export class SseService {
         toString(received_at) AS received_at_text
       FROM ${this.config.clickhouseDb}.error_events
       WHERE received_at >= toStartOfDay(now())
-        AND project_id IN (${projectIds.map(toClickHouseStringLiteral).join(', ')})
+        ${projectFilter}
       ORDER BY received_at DESC
       LIMIT ${RECENT_ERROR_LIMIT}
       FORMAT JSONEachRow

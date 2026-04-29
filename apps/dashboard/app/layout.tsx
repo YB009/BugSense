@@ -1,23 +1,12 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
 import { AppBoot } from './components/providers/AppBoot';
 
 export const metadata: Metadata = {
   title: 'BugSense Dashboard',
   description: 'Self-hosted error monitoring dashboard',
 };
-
-const geistSans = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-});
-
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-});
 
 export default function RootLayout({
   children,
@@ -32,10 +21,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable}`}
-        suppressHydrationWarning
-      >
+      <body suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
             __html: `(() => {

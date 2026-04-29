@@ -4,14 +4,22 @@ import {
   Logger,
 } from '@nestjs/common';
 import { EnrichedErrorEvent } from '@bugsense/types';
-import { request as httpRequest } from 'http';
-import { request as httpsRequest } from 'https';
+import { Agent as HttpAgent, request as httpRequest } from 'http';
+import { Agent as HttpsAgent, request as httpsRequest } from 'https';
 import { getIngestionRuntimeConfig } from '../config/runtime-config';
 
 @Injectable()
 export class ClickHouseService {
   private readonly logger = new Logger(ClickHouseService.name);
   private readonly config = getIngestionRuntimeConfig();
+  private readonly httpAgent = new HttpAgent({
+    keepAlive: true,
+    maxSockets: 20,
+  });
+  private readonly httpsAgent = new HttpsAgent({
+    keepAlive: true,
+    maxSockets: 20,
+  });
 
   async insertErrorEvent(event: EnrichedErrorEvent) {
     const query = `INSERT INTO ${this.config.clickhouseDb}.error_events FORMAT JSONEachRow`;
@@ -19,7 +27,7 @@ export class ClickHouseService {
     url.searchParams.set('query', query);
 
     const payload = `${JSON.stringify(this.toClickHouseRow(event))}\n`;
-    const response = await this.sendRequest(url, payload);
+    const response = await this.sendRequestWithRetry(url, payload);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       this.logger.error(`ClickHouse insert failed: ${response.body}`);
@@ -27,6 +35,33 @@ export class ClickHouseService {
         `ClickHouse insert failed: ${response.body}`,
       );
     }
+  }
+
+  private async sendRequestWithRetry(url: URL, payload: string) {
+    let attempt = 0;
+    let lastError: unknown;
+
+    while (attempt < this.config.clickhouseMaxRetries) {
+      attempt += 1;
+
+      try {
+        return await this.sendRequest(url, payload);
+      } catch (error) {
+        lastError = error;
+
+        if (!isRetryableClickHouseError(error) || attempt >= this.config.clickhouseMaxRetries) {
+          throw error;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(
+          `Retrying ClickHouse insert after transient failure (${attempt}/${this.config.clickhouseMaxRetries}): ${message}`,
+        );
+        await delay(attempt * 500);
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
   private buildHeaders() {
@@ -46,6 +81,7 @@ export class ClickHouseService {
 
   private sendRequest(url: URL, payload: string) {
     const requestImpl = url.protocol === 'https:' ? httpsRequest : httpRequest;
+    const agent = url.protocol === 'https:' ? this.httpsAgent : this.httpAgent;
     const headers = {
       ...this.buildHeaders(),
       'Content-Length': Buffer.byteLength(payload).toString(),
@@ -56,8 +92,9 @@ export class ClickHouseService {
         url,
         {
           method: 'POST',
+          agent,
           headers,
-          timeout: 10000,
+          timeout: this.config.clickhouseRequestTimeoutMs,
         },
         (res) => {
           let body = '';
@@ -76,7 +113,11 @@ export class ClickHouseService {
       );
 
       req.on('timeout', () => {
-        req.destroy(new Error('ClickHouse request timed out'));
+        req.destroy(
+          new Error(
+            `ClickHouse request timed out after ${this.config.clickhouseRequestTimeoutMs}ms`,
+          ),
+        );
       });
       req.on('error', reject);
       req.write(payload);
@@ -112,6 +153,25 @@ export class ClickHouseService {
       received_at: toClickHouseDateTime64(event.receivedAt),
     };
   }
+}
+
+function isRetryableClickHouseError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const networkError = error as Error & { code?: string };
+  return (
+    networkError.code === 'ECONNRESET' ||
+    networkError.code === 'ETIMEDOUT' ||
+    networkError.code === 'ECONNREFUSED' ||
+    error.message.includes('timed out') ||
+    error.message.includes('secure TLS connection was established')
+  );
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function toClickHouseDateTime64(value: string) {

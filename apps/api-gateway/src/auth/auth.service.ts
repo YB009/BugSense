@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -58,14 +59,17 @@ export class AuthService {
     const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
       email,
       authProvider: 'password',
+    }).catch((error) => {
+      if (!(error instanceof ServiceUnavailableException)) {
+        throw error;
+      }
+
+      return null;
     });
 
-    const user: JwtUser = {
-      sub: workspace!.user.id,
-      email: workspace!.user.email,
-      role: 'admin',
-      projectIds: workspace!.projects.map((project) => project.id),
-    };
+    const user = workspace
+      ? this.toJwtUser(workspace.user.id, workspace.user.email, workspace.projects)
+      : this.buildFallbackAdminUser(email);
 
     return {
       ...(await this.issueAccessToken(user)),
@@ -176,14 +180,17 @@ export class AuthService {
     const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
       email,
       authProvider: 'google',
+    }).catch((error) => {
+      if (!(error instanceof ServiceUnavailableException) || !isAdminEmail) {
+        throw error;
+      }
+
+      return null;
     });
 
-    const user: JwtUser = {
-      sub: workspace!.user.id,
-      email,
-      role: 'admin',
-      projectIds: workspace!.projects.map((project) => project.id),
-    };
+    const user = workspace
+      ? this.toJwtUser(workspace.user.id, email, workspace.projects)
+      : this.buildFallbackAdminUser(email);
 
     return {
       ...(await this.issueAccessToken(user)),
@@ -220,13 +227,37 @@ export class AuthService {
     try {
       const user = await this.jwtService.verifyAsync<JwtUser>(token);
       if (Array.isArray(user.projectIds)) {
+        if (
+          user.role === 'admin' &&
+          user.email === getApiGatewayRuntimeConfig().dashboardAdminEmail &&
+          !this.workspaceStore.isAvailable()
+        ) {
+          return {
+            ...user,
+            projectIds: this.getFallbackProjectIds(),
+          };
+        }
+
         return user;
       }
 
       const workspace = await this.workspaceStore.ensureUserWithDefaultProject({
         email: user.email,
         authProvider: 'google',
+      }).catch((error) => {
+        if (!(error instanceof ServiceUnavailableException)) {
+          throw error;
+        }
+
+        return null;
       });
+
+      if (!workspace) {
+        return {
+          ...user,
+          projectIds: this.getFallbackProjectIds(),
+        };
+      }
 
       return {
         ...user,
@@ -247,6 +278,32 @@ export class AuthService {
       expiresIn: config.jwtExpiresIn,
       user,
     };
+  }
+
+  private toJwtUser(
+    sub: string,
+    email: string,
+    projects: Array<{ id: string }>,
+  ): JwtUser {
+    return {
+      sub,
+      email,
+      role: 'admin',
+      projectIds: projects.map((project) => project.id),
+    };
+  }
+
+  private buildFallbackAdminUser(email: string): JwtUser {
+    return {
+      sub: `admin_${email.toLowerCase()}`,
+      email,
+      role: 'admin',
+      projectIds: this.getFallbackProjectIds(),
+    };
+  }
+
+  private getFallbackProjectIds() {
+    return ['*'];
   }
 }
 

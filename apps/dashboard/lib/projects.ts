@@ -1,5 +1,7 @@
 import { getDashboardAccessToken, getDashboardApiUrl } from './auth';
 
+const DASHBOARD_FETCH_TIMEOUT_MS = 3_000;
+
 export interface DashboardProject {
   id: string;
   name: string;
@@ -30,7 +32,7 @@ export async function fetchProjects(): Promise<DashboardProject[]> {
         Authorization: `Bearer ${token}`,
       },
       cache: 'no-store',
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(DASHBOARD_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -47,7 +49,9 @@ export async function fetchProjects(): Promise<DashboardProject[]> {
 
     return payload.projects ?? payload.data ?? [];
   } catch (error) {
-    console.error('Failed to fetch projects:', error);
+    if (!isAbortTimeoutError(error)) {
+      console.warn('Failed to fetch projects');
+    }
     return [];
   }
 }
@@ -64,7 +68,7 @@ export async function fetchRecentProjectErrors(): Promise<ProjectErrorEvent[]> {
 
     const response = await fetch(url.toString(), {
       cache: 'no-store',
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(DASHBOARD_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -81,7 +85,21 @@ export async function fetchRecentProjectErrors(): Promise<ProjectErrorEvent[]> {
 
     return payload.events ?? payload.data ?? [];
   } catch (error) {
-    console.error('Failed to fetch recent project errors:', error);
+    if (!isAbortTimeoutError(error)) {
+      console.warn('Failed to fetch recent project errors');
+    }
     return [];
   }
+}
+
+function isAbortTimeoutError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.name === 'TimeoutError' ||
+    error.name === 'AbortError' ||
+    error.message.includes('aborted due to timeout')
+  );
 }

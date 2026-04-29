@@ -13,6 +13,7 @@
   "dependencies": {
     "@bugsense/config": "workspace:*",
     "@bugsense/types": "workspace:*",
+    "@google/generative-ai": "^0.24.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.0",

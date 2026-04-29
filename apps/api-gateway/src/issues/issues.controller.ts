@@ -27,6 +27,11 @@ export class IssuesController {
     return this.issuesService.runGrouping();
   }
 
+  @Post('clear-today')
+  async clearTodayIssues(@Req() request: { user?: JwtUser }) {
+    return this.issuesService.clearTodayIssues(request.user!.projectIds);
+  }
+
   @Get('grouping/current')
   async getCurrentGrouping(@Req() request: { user?: JwtUser }) {
     return this.issuesService.getCurrentGrouping(request.user!.projectIds);

@@ -11,6 +11,7 @@ import { Button, buttonStyles } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { SectionHeader } from '../ui/SectionHeader';
 import { Skeleton } from '../ui/Skeleton';
+import { ClearTodayIssuesButton } from './ClearTodayIssuesButton';
 import { IssueListItem as IssueRow } from './IssueListItem';
 import { deriveIssueSeverity } from './issue-present';
 import {
@@ -29,10 +30,16 @@ export function IssuesListWorkspace({
   issues,
   projects,
   recentEvents,
+  renderedAt,
+  apiUrl,
+  token,
 }: {
   issues: IssueListItem[];
   projects: DashboardProject[];
   recentEvents: ProjectErrorEvent[];
+  renderedAt: string;
+  apiUrl: string;
+  token: string | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -45,6 +52,7 @@ export function IssuesListWorkspace({
   const [query, setQuery] = useState('');
   const [workflowMap, setWorkflowMap] = useState<StoredIssueWorkflowMap>({});
   const selectedStatus = (searchParams.get('status') as StatusFilter | null) ?? 'all';
+  const renderNowMs = useMemo(() => new Date(renderedAt).getTime(), [renderedAt]);
 
   useEffect(() => {
     setWorkflowMap(readIssueWorkflowMap());
@@ -90,7 +98,6 @@ export function IssuesListWorkspace({
   );
 
   const filteredIssues = useMemo(() => {
-    const now = Date.now();
     const maxAgeMs =
       selectedTimeRange === '24h'
         ? 24 * 60 * 60 * 1000
@@ -105,7 +112,7 @@ export function IssuesListWorkspace({
           issue.lastSeenAt,
           workflowMap,
         );
-        const severity = deriveIssueSeverity(issue);
+        const severity = deriveIssueSeverity(issue, renderNowMs);
         return {
           issue,
           severity,
@@ -123,7 +130,7 @@ export function IssuesListWorkspace({
           issue.environments.includes(selectedEnvironment);
         const matchesSeverity =
           selectedSeverity === 'all' || severity === selectedSeverity;
-        const matchesTime = now - lastSeenMs <= maxAgeMs;
+        const matchesTime = renderNowMs - lastSeenMs <= maxAgeMs;
         const matchesQuery =
           query.trim().length === 0 ||
           `${issue.title} ${issue.summary} ${issue.projectId}`
@@ -163,6 +170,7 @@ export function IssuesListWorkspace({
     selectedTimeRange,
     sortMode,
     workflowMap,
+    renderNowMs,
   ]);
 
   const recentProjectIds = useMemo(
@@ -177,9 +185,12 @@ export function IssuesListWorkspace({
         title="Triage clustered failures without leaving the queue."
         description="Filter by project, status, environment, severity, and time range, then move directly into the detail view when a cluster becomes actionable."
         action={
-          <Link className={buttonStyles({ variant: 'secondary' })} href="/grouping">
-            <span className="leading-none text-center">Run grouping</span>
-          </Link>
+          <div className="flex flex-wrap items-start justify-end gap-3">
+            <ClearTodayIssuesButton apiUrl={apiUrl} token={token} />
+            <Link className={buttonStyles({ variant: 'secondary' })} href="/grouping">
+              <span className="leading-none text-center">Run grouping</span>
+            </Link>
+          </div>
         }
       />
 
@@ -259,13 +270,13 @@ export function IssuesListWorkspace({
               value={sortMode}
             />
             <label className="space-y-2">
-              <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                 Search
               </span>
               <div className="flex h-11 items-center gap-2 rounded-xl border border-border bg-panel-strong/70 px-3">
-                <Search className="size-4 text-zinc-500" />
+                <Search className="size-4 text-muted-foreground" />
                 <input
-                  className="w-full bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
+                  className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search message, project, cluster"
                   type="search"
@@ -318,6 +329,7 @@ export function IssuesListWorkspace({
               isRegression={workflow.isRegression}
               issue={issue}
               key={`${issue.issueId}:${workflowMap[issue.issueId]?.changedAt ?? 'initial'}`}
+              nowMs={renderNowMs}
               status={workflow.status}
             />
           ))}
@@ -340,11 +352,11 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-2">
-      <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+      <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
         {label}
       </span>
       <select
-        className="h-11 w-full rounded-xl border border-border bg-panel-strong/70 px-3 text-sm text-zinc-100 outline-none transition-colors focus:border-zinc-500"
+        className="h-11 w-full rounded-xl border border-border bg-panel-strong/70 px-3 text-sm text-foreground outline-none transition-colors focus:border-ring"
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >

@@ -32,7 +32,7 @@ export class ProjectsController {
   @UseGuards(JwtAuthGuard)
   async listProjects(@Req() request: { user?: JwtUser }) {
     return {
-      projects: await this.projectsService.listProjectsForUser(request.user!.sub),
+      projects: await this.projectsService.listProjectsForUser(request.user!),
     };
   }
 

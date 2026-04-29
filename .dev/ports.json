@@ -1,7 +1,7 @@
 {
   "ingestion-service": {
     "host": "127.0.0.1",
-    "port": 3003
+    "port": 3001
   },
   "alert-service": {
     "host": "127.0.0.1",

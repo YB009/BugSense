@@ -1,11 +1,14 @@
-import type { IssueDetail, IssueListItem } from '../../../lib/issues';
+import type { IssueDetail, IssueFrequencyPoint, IssueListItem } from '../../../lib/issues';
 
 export type IssueSeverity = 'high' | 'medium' | 'low';
 
-export function deriveIssueSeverity(issue: Pick<IssueListItem, 'totalEvents' | 'lastSeenAt'>) {
+export function deriveIssueSeverity(
+  issue: Pick<IssueListItem, 'totalEvents' | 'lastSeenAt'>,
+  nowMs = Date.now(),
+) {
   const ageHours = Math.max(
     0,
-    (Date.now() - new Date(issue.lastSeenAt).getTime()) / (1000 * 60 * 60),
+    (nowMs - new Date(issue.lastSeenAt).getTime()) / (1000 * 60 * 60),
   );
 
   if (issue.totalEvents >= 30 || (issue.totalEvents >= 12 && ageHours <= 24)) {
@@ -31,9 +34,9 @@ export function severityClasses(severity: IssueSeverity) {
   return 'text-sky-300 bg-sky-400/10 border-sky-400/20';
 }
 
-export function formatRelativeTime(value: string) {
+export function formatRelativeTime(value: string, nowMs = Date.now()) {
   const date = new Date(value);
-  const diffMs = Date.now() - date.getTime();
+  const diffMs = nowMs - date.getTime();
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
@@ -75,7 +78,19 @@ export function extractCulprit(stackTrace: string, fallback: string) {
     .trim();
 }
 
-export function buildFrequencySeries(issue: Pick<IssueDetail['issue'], 'firstSeenAt' | 'lastSeenAt'>, totalEvents: number) {
+export function buildFrequencySeries(
+  series: IssueFrequencyPoint[] | undefined,
+  issue: Pick<IssueDetail['issue'], 'firstSeenAt' | 'lastSeenAt'>,
+  totalEvents: number,
+) {
+  if (series && series.length > 0) {
+    return series.map((point) => ({
+      label: formatTimeBucket(point.occurredAt),
+      value: point.count,
+      occurredAt: point.occurredAt,
+    }));
+  }
+
   const first = new Date(issue.firstSeenAt).getTime();
   const last = new Date(issue.lastSeenAt).getTime();
   const start = Number.isFinite(first) ? first : Date.now() - 6 * 60 * 60 * 1000;
@@ -91,8 +106,9 @@ export function buildFrequencySeries(issue: Pick<IssueDetail['issue'], 'firstSee
     remainder = Math.max(0, remainder - 1);
 
     return {
-      label: `${String(time.getHours()).padStart(2, '0')}:00`,
+      label: formatTimeBucket(time.toISOString()),
       value: base + bonus + (index === buckets - 1 ? Math.ceil(totalEvents * 0.08) : 0),
+      occurredAt: time.toISOString(),
     };
   });
 }
@@ -185,4 +201,13 @@ export function splitStackFrames(stackTrace: string) {
 
 function shiftTimestamp(value: string, minutesBack: number) {
   return new Date(new Date(value).getTime() - minutesBack * 60 * 1000).toISOString();
+}
+
+function formatTimeBucket(value: string) {
+  return new Intl.DateTimeFormat([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
 }

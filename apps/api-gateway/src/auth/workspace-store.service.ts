@@ -4,6 +4,8 @@ import {
   InternalServerErrorException,
   OnModuleDestroy,
   OnModuleInit,
+  Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -40,13 +42,29 @@ export interface WorkspaceProject {
 export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
   private readonly config = getApiGatewayRuntimeConfig();
   private readonly pool = this.createPool();
+  private readonly logger = new Logger(WorkspaceStoreService.name);
+  private available = true;
 
   async onModuleInit() {
-    await this.migrate();
+    try {
+      await this.migrate();
+      this.available = true;
+    } catch (error) {
+      this.available = false;
+      const reason =
+        error instanceof Error ? error.message : 'Unknown database startup error';
+      this.logger.error(
+        `Workspace store initialization failed. Database-backed workspace features are unavailable: ${reason}`,
+      );
+    }
   }
 
   async onModuleDestroy() {
     await this.pool?.end();
+  }
+
+  isAvailable() {
+    return this.available && Boolean(this.pool);
   }
 
   async ensureUserWithDefaultProject(input: {
@@ -351,12 +369,18 @@ export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
     values?: unknown[],
   ) {
     if (!this.pool) {
-      throw new InternalServerErrorException(
-        'DATABASE_URL is required for workspace ownership storage',
+      this.available = false;
+      throw new ServiceUnavailableException(
+        'Workspace database is not configured',
       );
     }
 
-    return this.pool.query<T>(sql, values);
+    return this.pool.query<T>(sql, values).catch((error) => {
+      this.available = false;
+      throw new ServiceUnavailableException(
+        error instanceof Error ? error.message : 'Workspace database is unavailable',
+      );
+    });
   }
 
   private createPool() {

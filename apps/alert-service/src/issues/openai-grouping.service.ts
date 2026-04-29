@@ -69,7 +69,9 @@ export class OpenAiGroupingService {
         return heuristicClusters(events);
       }
 
-      const parsed = JSON.parse(content) as { clusters?: ModelCluster[] };
+      const parsed = parseGeminiGroupingResponse(content) as {
+        clusters?: ModelCluster[];
+      };
       if (!Array.isArray(parsed.clusters) || parsed.clusters.length === 0) {
         return heuristicClusters(events);
       }
@@ -82,6 +84,78 @@ export class OpenAiGroupingService {
       return heuristicClusters(events);
     }
   }
+}
+
+function parseGeminiGroupingResponse(content: string) {
+  const normalized = content.trim();
+
+  try {
+    return JSON.parse(stripMarkdownCodeFence(normalized));
+  } catch {
+    const extracted = extractFirstJsonObject(stripMarkdownCodeFence(normalized));
+    if (!extracted) {
+      throw new Error(`Gemini returned non-JSON content: ${normalized.slice(0, 200)}`);
+    }
+
+    return JSON.parse(extracted);
+  }
+}
+
+function stripMarkdownCodeFence(value: string) {
+  const fencedMatch = value.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fencedMatch ? fencedMatch[1].trim() : value;
+}
+
+function extractFirstJsonObject(value: string) {
+  const start = value.indexOf('{');
+  if (start === -1) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < value.length; index += 1) {
+    const char = value[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return value.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
 }
 
 function heuristicClusters(events: GroupingCandidateEvent[]): ModelCluster[] {

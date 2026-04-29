@@ -1,5 +1,6 @@
 import { resolveWorkspacePath } from '@bugsense/config';
 import { parseProjectApiKeys } from '@bugsense/config';
+import { isAbsolute } from 'path';
 
 export function getApiGatewayRuntimeConfig() {
   const allowedOrigins = parseAllowedOrigins(
@@ -34,18 +35,34 @@ export function getApiGatewayRuntimeConfig() {
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
-    geminiApiKey: process.env.GEMINI_API_KEY,
-    aiPanelModel:
-      process.env.BUGSENSE_AI_PANEL_MODEL ?? 'gemini-2.5-flash',
-    issuesStoragePath:
-      process.env.BUGSENSE_ISSUES_STORAGE_PATH ??
-      resolveWorkspacePath('storage', 'issues', 'grouped-issues.json'),
+    geminiApiKey:
+      process.env.GOOGLE_AI_API_KEY ?? process.env.GEMINI_API_KEY,
+    aiPanelModel: normalizeGeminiModel(
+      process.env.GOOGLE_AI_MODEL ??
+        process.env.BUGSENSE_AI_PANEL_MODEL ??
+        'gemini-2.5-flash',
+    ),
+    issuesStoragePath: resolveIssuesStoragePath(
+      process.env.BUGSENSE_ISSUES_STORAGE_PATH,
+    ),
     databaseUrl: process.env.DATABASE_URL,
     databaseSsl: parseBoolean(process.env.DATABASE_SSL, false),
     internalServiceToken:
       process.env.BUGSENSE_INTERNAL_SERVICE_TOKEN ??
       'dev-only-internal-token',
   };
+}
+
+function resolveIssuesStoragePath(value: string | undefined) {
+  if (!value) {
+    return resolveWorkspacePath('storage', 'issues', 'grouped-issues.json');
+  }
+
+  if (isAbsolute(value)) {
+    return value;
+  }
+
+  return resolveWorkspacePath(...value.split(/[\\/]+/).filter(Boolean));
 }
 
 function parsePort(value: string | undefined, fallback: number) {
@@ -90,4 +107,15 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
   }
 
   return value === 'true';
+}
+
+function normalizeGeminiModel(value: string) {
+  switch (value.trim()) {
+    case 'gemini-1.5-flash':
+      return 'gemini-2.5-flash';
+    case 'gemini-1.5-pro':
+      return 'gemini-2.5-pro';
+    default:
+      return value.trim();
+  }
 }

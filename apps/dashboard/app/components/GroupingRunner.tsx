@@ -94,6 +94,9 @@ export function GroupingRunner({
                 <div>
                   <p className="issue-title">{issue.title}</p>
                   <p className="feed-detail">{issue.summary}</p>
+                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-400/90">
+                    Tap to view details
+                  </p>
                 </div>
                 <div className="issue-list-meta">
                   <span>{issue.eventIds.length} events</span>

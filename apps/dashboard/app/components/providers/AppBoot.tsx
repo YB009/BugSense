@@ -21,7 +21,7 @@ export function AppBoot({ children }: { children: ReactNode }) {
     const timeout = window.setTimeout(() => {
       window.sessionStorage.setItem(BOOT_KEY, '1');
       setShowSplash(false);
-    }, reducedMotion ? 150 : 1050);
+    }, reducedMotion ? 60 : 280);
 
     return () => window.clearTimeout(timeout);
   }, [reducedMotion]);
@@ -74,14 +74,6 @@ export function AppBoot({ children }: { children: ReactNode }) {
                   Initializing BugSense...
                 </span>
               </motion.div>
-              <div className="space-y-3 text-center">
-                <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                  Monitor the moment it breaks.
-                </h1>
-                <p className="mx-auto max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  Warming the observability workspace, syncing the live feed, and preparing your project surfaces.
-                </p>
-              </div>
               <div className="relative mt-4 h-1 w-52 overflow-hidden rounded-full bg-panel-strong">
                 <motion.div
                   animate={{ x: ['-100%', '120%'] }}

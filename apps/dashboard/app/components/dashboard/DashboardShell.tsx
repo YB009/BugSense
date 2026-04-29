@@ -61,8 +61,8 @@ export function DashboardShell({
             'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-panel/90 px-4 py-5 backdrop-blur-xl transition-transform duration-300 lg:sticky lg:translate-x-0',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
-          initial={reducedMotion ? false : { x: -16, opacity: 0 }}
-          animate={reducedMotion ? {} : { x: 0, opacity: 1 }}
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={reducedMotion ? {} : { opacity: 1 }}
           transition={{ duration: 0.28, ease: 'easeOut' }}
         >
           <div className="mb-8 flex items-center justify-between">

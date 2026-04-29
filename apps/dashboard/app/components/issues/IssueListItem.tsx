@@ -19,12 +19,14 @@ export function IssueListItem({
   issue,
   status,
   isRegression,
+  nowMs,
 }: {
   issue: IssueListItemType;
   status: IssueWorkflowStatus;
   isRegression: boolean;
+  nowMs: number;
 }) {
-  const severity = deriveIssueSeverity(issue);
+  const severity = deriveIssueSeverity(issue, nowMs);
   const usersAffected = estimateAffectedUsers(issue);
   const culprit = extractCulprit(issue.sampleStackTrace, issue.clusterKey);
 
@@ -37,10 +39,10 @@ export function IssueListItem({
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
-            <h3 className="truncate text-base font-semibold text-zinc-100">
+            <h3 className="truncate text-base font-semibold text-foreground">
               {issue.title}
             </h3>
-            <p className="truncate font-mono text-xs text-zinc-500">{culprit}</p>
+            <p className="truncate font-mono text-xs text-muted-foreground">{culprit}</p>
           </div>
           <StatusBadge status={status} isRegression={isRegression} />
         </div>
@@ -56,11 +58,12 @@ export function IssueListItem({
           <IssueTag icon={<CircleDot className="size-3" />} label={issue.environments[0] ?? 'production'} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
           <span>{issue.totalEvents} events</span>
           <span>{usersAffected} users affected</span>
-          <span>First seen {formatRelativeTime(issue.firstSeenAt)}</span>
-          <span className="text-zinc-300">Last seen {formatRelativeTime(issue.lastSeenAt)}</span>
+          <span>First seen {formatRelativeTime(issue.firstSeenAt, nowMs)}</span>
+          <span className="text-foreground/85">Last seen {formatRelativeTime(issue.lastSeenAt, nowMs)}</span>
+          <span className="text-foreground/65">Tap to view details</span>
         </div>
       </motion.article>
     </Link>
@@ -86,7 +89,7 @@ export function StatusBadge({
     status === 'resolved'
       ? 'text-emerald-400 border-emerald-400/20 bg-emerald-400/8'
       : status === 'ignored'
-        ? 'text-zinc-400 border-zinc-500/20 bg-zinc-500/8'
+        ? 'text-muted-foreground border-border bg-panel-strong/70'
         : 'text-red-400 border-red-400/20 bg-red-400/10';
 
   return (
@@ -113,7 +116,7 @@ function IssueTag({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border border-border bg-panel-strong/75 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-300',
+        'inline-flex items-center gap-1.5 rounded-full border border-border bg-panel-strong/75 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/80',
         className,
       )}
     >

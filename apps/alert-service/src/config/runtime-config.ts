@@ -1,4 +1,5 @@
 import { resolveWorkspacePath } from '@bugsense/config';
+import { isAbsolute } from 'path';
 import {
   AlertEmailRecipientsConfig,
   AlertRulesConfig,
@@ -22,11 +23,12 @@ export function getAlertRuntimeConfig() {
     geminiApiKey: process.env.GEMINI_API_KEY,
     nightlyGroupingModel:
       process.env.BUGSENSE_NIGHTLY_GROUPING_MODEL ?? 'gemma-3-12b-it',
-    aiPanelModel:
+    aiPanelModel: normalizeGeminiModel(
       process.env.BUGSENSE_AI_PANEL_MODEL ?? 'gemini-2.5-flash',
-    issuesStoragePath:
-      process.env.BUGSENSE_ISSUES_STORAGE_PATH ??
-      resolveWorkspacePath('storage', 'issues', 'grouped-issues.json'),
+    ),
+    issuesStoragePath: resolveIssuesStoragePath(
+      process.env.BUGSENSE_ISSUES_STORAGE_PATH,
+    ),
     alertRules,
     resendApiKey: process.env.RESEND_API_KEY,
     alertEmailFrom:
@@ -38,6 +40,18 @@ export function getAlertRuntimeConfig() {
       'dev-only-internal-token',
     redisConnection: parseRedisConnection(),
   };
+}
+
+function resolveIssuesStoragePath(value: string | undefined) {
+  if (!value) {
+    return resolveWorkspacePath('storage', 'issues', 'grouped-issues.json');
+  }
+
+  if (isAbsolute(value)) {
+    return value;
+  }
+
+  return resolveWorkspacePath(...value.split(/[\\/]+/).filter(Boolean));
 }
 
 function parsePort(value: string | undefined, fallback: number) {
@@ -139,6 +153,17 @@ function parseAlertEmailRecipients(
     );
   } catch {
     return {};
+  }
+}
+
+function normalizeGeminiModel(value: string) {
+  switch (value.trim()) {
+    case 'gemini-1.5-flash':
+      return 'gemini-2.5-flash';
+    case 'gemini-1.5-pro':
+      return 'gemini-2.5-pro';
+    default:
+      return value.trim();
   }
 }
 

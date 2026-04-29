@@ -2,6 +2,9 @@ import { GroupingRunner } from '../../components/GroupingRunner';
 import { getDashboardAccessToken, getDashboardApiUrl } from '../../../lib/auth';
 import { fetchCurrentGrouping } from '../../../lib/issues';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function GroupingPage() {
   const token = await getDashboardAccessToken();
 

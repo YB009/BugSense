@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -9,40 +9,78 @@ import { Badge } from '../ui/Badge';
 import { Skeleton } from '../ui/Skeleton';
 import type { IssueAnalysisResult } from '../../../lib/issues';
 
+interface ApiErrorPayload {
+  message?: string | string[];
+  error?: string;
+}
+
 export function AIAnalysisPanel({
-  apiUrl,
-  token,
   issueId,
+  projectId,
 }: {
-  apiUrl: string;
-  token: string;
   issueId: string;
+  projectId: string;
 }) {
   const [analysis, setAnalysis] = useState<IssueAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const affectedArea = useMemo(() => issueId.split('_').slice(-1)[0] ?? issueId, [issueId]);
+  const evidence = analysis?.evidence ?? [];
+  const waysToImproveConfidence = analysis?.waysToImproveConfidence ?? [];
+  const confidenceScore = analysis?.confidenceScore;
+  const storageKey = useMemo(
+    () => `bugsense:analysis:${projectId}:${issueId}`,
+    [issueId, projectId],
+  );
+
+  useEffect(() => {
+    setError(null);
+    setAnalysis(readStoredAnalysis(storageKey));
+  }, [storageKey]);
+
+  useEffect(() => {
+    writeStoredAnalysis(storageKey, analysis);
+  }, [analysis, storageKey]);
 
   function handleAnalyze() {
     setError(null);
+    setAnalysis(null);
 
     startTransition(async () => {
       try {
-        const response = await fetch(`${apiUrl}/issues/${issueId}/analysis`, {
+        const response = await fetch(`/api/issues/${issueId}/analysis`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         });
 
         if (!response.ok) {
-          throw new Error('Analysis request failed');
+          const raw = await response.text();
+          let message = 'Analysis request failed';
+
+          if (raw.trim()) {
+            try {
+              const parsed = JSON.parse(raw) as ApiErrorPayload;
+              const parsedMessage = Array.isArray(parsed.message)
+                ? parsed.message.join(', ')
+                : parsed.message;
+              message = parsedMessage ?? parsed.error ?? raw.trim();
+            } catch {
+              message = raw.trim();
+            }
+          }
+
+          throw new Error(message);
         }
 
         const payload = (await response.json()) as IssueAnalysisResult;
+        if (payload.provider !== 'gemini') {
+          throw new Error(
+            'Analysis succeeded, but the provider was not Gemini.',
+          );
+        }
         setAnalysis(payload);
       } catch (caughtError) {
+        setAnalysis(null);
         setError(
           caughtError instanceof Error
             ? caughtError.message
@@ -61,7 +99,7 @@ export function AIAnalysisPanel({
             <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-violet-300/80">
               AI analysis
             </p>
-            <h3 className="text-lg font-semibold text-zinc-50">Root cause + suggested fix</h3>
+            <h3 className="text-lg font-semibold text-foreground">Root cause + suggested fix</h3>
           </div>
           <Button
             className="shrink-0"
@@ -78,7 +116,13 @@ export function AIAnalysisPanel({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="info">Gemini assisted</Badge>
           <Badge variant="warning">Affected area: {affectedArea}</Badge>
-          {analysis ? <Badge variant="success">{analysis.confidence} confidence</Badge> : null}
+          {analysis ? (
+            <Badge variant="success">
+              {typeof confidenceScore === 'number'
+                ? `${confidenceScore}% ${analysis.confidence} confidence`
+                : `${analysis.confidence} confidence`}
+            </Badge>
+          ) : null}
         </div>
 
         {error ? (
@@ -99,14 +143,14 @@ export function AIAnalysisPanel({
         ) : analysis ? (
           <div className="space-y-4">
             <section className="space-y-2">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Root cause
               </p>
-              <p className="text-sm leading-6 text-zinc-200">{analysis.rootCause}</p>
+              <p className="text-sm leading-6 text-foreground/90">{analysis.rootCause}</p>
             </section>
 
             <section className="space-y-2">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Suggested fix
               </p>
               <pre className="overflow-x-auto rounded-2xl border border-violet-400/10 bg-[#111114] p-4 font-mono text-xs leading-6 text-zinc-200">
@@ -114,17 +158,86 @@ export function AIAnalysisPanel({
               </pre>
             </section>
 
-            <div className="flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+            {evidence.length > 0 ? (
+              <section className="space-y-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Evidence used
+                </p>
+                <ul className="space-y-2 text-sm leading-6 text-foreground/90">
+                  {evidence.map((item, index) => (
+                    <li key={`${item}-${index}`} className="flex gap-2">
+                      <span className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-violet-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {waysToImproveConfidence.length > 0 ? (
+              <section className="space-y-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  To make this result more solid
+                </p>
+                <ul className="space-y-2 text-sm leading-6 text-foreground/90">
+                  {waysToImproveConfidence.map((item, index) => (
+                    <li key={`${item}-${index}`} className="flex gap-2">
+                      <span className="mt-[0.45rem] size-1.5 shrink-0 rounded-full bg-amber-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            <div className="flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               <span>Model {analysis.model}</span>
               <span>Provider {analysis.provider}</span>
             </div>
           </div>
         ) : (
-          <p className="text-sm leading-6 text-zinc-400">
+          <p className="text-sm leading-6 text-muted-foreground">
             Request an on-demand AI summary when you need a fast root-cause read before opening the stack and frequency data.
           </p>
         )}
       </div>
     </Card>
   );
+}
+
+function readStoredAnalysis(storageKey: string) {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      return null;
+    }
+
+    return JSON.parse(raw) as IssueAnalysisResult;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredAnalysis(
+  storageKey: string,
+  analysis: IssueAnalysisResult | null,
+) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    if (!analysis) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(analysis));
+  } catch {
+    // Ignore storage failures.
+  }
 }

@@ -11,6 +11,14 @@ export function getIngestionRuntimeConfig() {
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
     clickhousePassword: process.env.CLICKHOUSE_PASSWORD,
+    clickhouseRequestTimeoutMs: parsePort(
+      process.env.CLICKHOUSE_REQUEST_TIMEOUT_MS,
+      30000,
+    ),
+    clickhouseMaxRetries: parsePort(
+      process.env.CLICKHOUSE_MAX_RETRIES,
+      3,
+    ),
     sourcemapStorageDir:
       process.env.SOURCEMAP_STORAGE_DIR ??
       resolveWorkspacePath('storage', 'sourcemaps'),

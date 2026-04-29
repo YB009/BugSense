@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   AlertTriangle,
@@ -45,31 +45,36 @@ import {
 import { StatusBadge } from './IssueListItem';
 
 export function IssueDetailWorkspace({
-  apiUrl,
   issueId,
   issue,
-  token,
+  renderedAt,
 }: {
-  apiUrl: string;
   issueId: string;
   issue: IssueDetail;
-  token: string;
+  renderedAt: string;
 }) {
-  const [workflowStatus, setWorkflowStatus] = useState<IssueWorkflowStatus>(
-    getIssueWorkflowState(issueId, issue.issue.lastSeenAt).status,
-  );
-  const [assignee, setAssignee] = useState('Unassigned');
+  const [workflow, setWorkflow] = useState<{
+    status: IssueWorkflowStatus;
+    isRegression: boolean;
+  }>({
+    status: 'unresolved',
+    isRegression: false,
+  });
   const [manualSeverity, setManualSeverity] = useState(
     deriveIssueSeverity({
       totalEvents: issue.totalEvents,
       lastSeenAt: issue.issue.lastSeenAt,
-    }),
+    }, new Date(renderedAt).getTime()),
   );
+  const renderNowMs = useMemo(() => new Date(renderedAt).getTime(), [renderedAt]);
 
-  const workflow = getIssueWorkflowState(issueId, issue.issue.lastSeenAt);
+  useEffect(() => {
+    setWorkflow(getIssueWorkflowState(issueId, issue.issue.lastSeenAt));
+  }, [issueId, issue.issue.lastSeenAt]);
+
   const culprit = extractCulprit(issue.stackTrace, issue.issue.clusterKey);
   const frequencyData = useMemo(
-    () => buildFrequencySeries(issue.issue, issue.totalEvents),
+    () => buildFrequencySeries(issue.frequencySeries, issue.issue, issue.totalEvents),
     [issue],
   );
   const userRows = useMemo(() => buildSyntheticUsers(issue), [issue]);
@@ -79,7 +84,10 @@ export function IssueDetailWorkspace({
 
   function updateStatus(nextStatus: IssueWorkflowStatus) {
     persistIssueWorkflowState(issueId, nextStatus);
-    setWorkflowStatus(nextStatus);
+    setWorkflow({
+      status: nextStatus,
+      isRegression: false,
+    });
   }
 
   return (
@@ -93,23 +101,28 @@ export function IssueDetailWorkspace({
             {workflow.isRegression ? <Badge variant="warning">Regression</Badge> : null}
           </div>
           <div className="space-y-2">
-            <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-zinc-50">
+            <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-foreground">
               {issue.issue.title}
             </h1>
-            <p className="max-w-3xl text-sm leading-7 text-zinc-400">{issue.issue.summary}</p>
-            <p className="font-mono text-xs text-zinc-500">{culprit}</p>
+            <p className="max-w-3xl text-sm leading-7 text-muted-foreground">{issue.issue.summary}</p>
+            <p className="font-mono text-xs text-muted-foreground">{culprit}</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 xl:justify-end">
-          <Button onClick={() => updateStatus('resolved')} variant="secondary">
-            Resolve
+          <Button
+            onClick={() =>
+              updateStatus(workflow.status === 'resolved' ? 'unresolved' : 'resolved')
+            }
+            variant="secondary"
+          >
+            {workflow.status === 'resolved' ? 'Unresolve' : 'Resolve'}
           </Button>
           <Button onClick={() => updateStatus('ignored')} variant="ghost">
             Ignore
           </Button>
           <select
-            className="h-11 rounded-xl border border-border bg-panel px-3 text-sm text-zinc-100 outline-none"
+            className="h-11 rounded-xl border border-border bg-panel px-3 text-sm text-foreground outline-none"
             onChange={(event) => setManualSeverity(event.target.value as typeof manualSeverity)}
             value={manualSeverity}
           >
@@ -117,25 +130,15 @@ export function IssueDetailWorkspace({
             <option value="medium">Medium severity</option>
             <option value="low">Low severity</option>
           </select>
-          <select
-            className="h-11 rounded-xl border border-border bg-panel px-3 text-sm text-zinc-100 outline-none"
-            onChange={(event) => setAssignee(event.target.value)}
-            value={assignee}
-          >
-            <option>Unassigned</option>
-            <option>Platform team</option>
-            <option>Frontend team</option>
-            <option>Backend team</option>
-          </select>
-          <StatusBadge isRegression={workflow.isRegression} status={workflowStatus} />
+          <StatusBadge isRegression={workflow.isRegression} status={workflow.status} />
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <FlatStat label="Events" value={issue.totalEvents.toString()} />
         <FlatStat label="Users affected" value={issue.affectedUsers.toString()} />
-        <FlatStat label="First seen" value={formatRelativeTime(issue.issue.firstSeenAt)} />
-        <FlatStat label="Last seen" value={formatRelativeTime(issue.issue.lastSeenAt)} />
+        <FlatStat label="First seen" value={formatRelativeTime(issue.issue.firstSeenAt, renderNowMs)} />
+        <FlatStat label="Last seen" value={formatRelativeTime(issue.issue.lastSeenAt, renderNowMs)} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_22rem]">
@@ -143,10 +146,10 @@ export function IssueDetailWorkspace({
           <Card className="p-5">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                   Stack trace viewer
                 </p>
-                <h3 className="mt-1 text-lg font-semibold text-zinc-100">
+                <h3 className="mt-1 text-lg font-semibold text-foreground">
                   Source-mapped frames
                 </h3>
               </div>
@@ -156,7 +159,7 @@ export function IssueDetailWorkspace({
               </div>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border bg-[#111]">
-              <div className="border-b border-border px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+              <div className="border-b border-border px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Culprit: {culprit}
               </div>
               <div className="max-h-[28rem] overflow-auto p-3">
@@ -194,20 +197,32 @@ export function IssueDetailWorkspace({
           </Card>
 
           <Card className="p-5">
-            <div className="mb-4">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <div className="mb-4">
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                 Frequency
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-zinc-100">Occurrence density</h3>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">Occurrence density</h3>
             </div>
             <div style={{ width: '100%', minWidth: 0, minHeight: 300 }}>
               <ClientChart height={300}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={frequencyData}>
                     <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                    <XAxis dataKey="label" stroke="rgba(161,161,170,0.75)" tickLine={false} axisLine={false} />
-                    <YAxis stroke="rgba(161,161,170,0.75)" tickLine={false} axisLine={false} />
+                    <XAxis
+                      dataKey="label"
+                      minTickGap={24}
+                      stroke="rgba(161,161,170,0.75)"
+                      tick={{ fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis stroke="rgba(161,161,170,0.75)" tickLine={false} axisLine={false} allowDecimals={false} />
                     <Tooltip
+                      formatter={(value) => [
+                        `${value} occurrence${Number(value) === 1 ? '' : 's'}`,
+                        'Count',
+                      ]}
+                      labelFormatter={(label) => `Occurred: ${label}`}
                       contentStyle={{
                         background: '#111114',
                         border: '1px solid rgba(39,39,42,1)',
@@ -224,10 +239,10 @@ export function IssueDetailWorkspace({
 
           <Card className="p-5">
             <div className="mb-4">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                 Recent events
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-zinc-100">
+              <h3 className="mt-1 text-lg font-semibold text-foreground">
                 Last {recentEvents.length} matched event snapshots
               </h3>
             </div>
@@ -239,10 +254,10 @@ export function IssueDetailWorkspace({
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-xs text-zinc-200">{event.eventId}</p>
-                      <p className="mt-1 text-sm text-zinc-500">{formatRelativeTime(event.occurredAt)}</p>
+                      <p className="truncate font-mono text-xs text-foreground/85">{event.eventId}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{formatRelativeTime(event.occurredAt, renderNowMs)}</p>
                     </div>
-                    <ChevronsRight className="size-4 text-zinc-500" />
+                    <ChevronsRight className="size-4 text-muted-foreground" />
                   </summary>
                   <pre className="mt-4 overflow-x-auto rounded-2xl border border-border bg-[#111] p-4 font-mono text-xs leading-6 text-zinc-300">
                     <code>{JSON.stringify(event.payload, null, 2)}</code>
@@ -257,14 +272,26 @@ export function IssueDetailWorkspace({
           <Card className="p-5">
             <div className="space-y-4">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                   Context
                 </p>
-                <h3 className="mt-1 text-lg font-semibold text-zinc-100">Metadata surface</h3>
+                <h3 className="mt-1 text-lg font-semibold text-foreground">Metadata surface</h3>
               </div>
               <div className="grid gap-3">
-                <MetaRow icon={<FolderKanban className="size-4" />} label="Project" value={issue.issue.projectId} />
-                <MetaRow icon={<GitBranch className="size-4" />} label="Cluster" value={issue.issue.clusterKey} />
+                <MetaRow
+                  icon={<FolderKanban className="size-4" />}
+                  label="Project"
+                  mono
+                  value={abbreviateMetaValue(issue.issue.projectId)}
+                  valueTitle={issue.issue.projectId}
+                />
+                <MetaRow
+                  icon={<GitBranch className="size-4" />}
+                  label="Cluster"
+                  mono
+                  value={abbreviateMetaValue(issue.issue.clusterKey)}
+                  valueTitle={issue.issue.clusterKey}
+                />
                 <MetaRow
                   icon={<CircleDot className="size-4" />}
                   label="Environments"
@@ -279,18 +306,18 @@ export function IssueDetailWorkspace({
             </div>
           </Card>
 
-          <AIAnalysisPanel apiUrl={apiUrl} issueId={issueId} token={token} />
+          <AIAnalysisPanel issueId={issueId} projectId={issue.issue.projectId} />
 
           <Card className="p-5">
             <div className="mb-4">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                 Affected users
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-zinc-100">Current impact</h3>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">Current impact</h3>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border">
               <table className="min-w-full divide-y divide-border text-left text-sm">
-                <thead className="bg-zinc-950/70 text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+                <thead className="bg-panel-strong/80 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   <tr>
                     <th className="px-3 py-3">User ID</th>
                     <th className="px-3 py-3">First Seen</th>
@@ -298,12 +325,12 @@ export function IssueDetailWorkspace({
                     <th className="px-3 py-3">Occurrences</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border bg-panel-strong/45 text-zinc-200">
+                <tbody className="divide-y divide-border bg-panel-strong/45 text-foreground/88">
                   {userRows.map((row) => (
                     <tr key={row.userId}>
                       <td className="px-3 py-3 font-mono text-xs">{row.userId}</td>
-                      <td className="px-3 py-3">{formatRelativeTime(row.firstSeen)}</td>
-                      <td className="px-3 py-3">{formatRelativeTime(row.lastSeen)}</td>
+                      <td className="px-3 py-3">{formatRelativeTime(row.firstSeen, renderNowMs)}</td>
+                      <td className="px-3 py-3">{formatRelativeTime(row.lastSeen, renderNowMs)}</td>
                       <td className="px-3 py-3">{row.occurrences}</td>
                     </tr>
                   ))}
@@ -314,10 +341,10 @@ export function IssueDetailWorkspace({
 
           <Card className="p-5">
             <div className="mb-4">
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
                 Breadcrumbs
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-zinc-100">Context timeline</h3>
+              <h3 className="mt-1 text-lg font-semibold text-foreground">Context timeline</h3>
             </div>
             <div className="space-y-4">
               {timeline.map((item, index) => (
@@ -329,10 +356,10 @@ export function IssueDetailWorkspace({
                     ) : null}
                   </div>
                   <div className="space-y-1 pb-2">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+                    <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       {item.label}
                     </p>
-                    <p className="text-sm leading-6 text-zinc-200">{item.detail}</p>
+                    <p className="text-sm leading-6 text-foreground/88">{item.detail}</p>
                   </div>
                 </div>
               ))}
@@ -347,8 +374,8 @@ export function IssueDetailWorkspace({
 function FlatStat({ label, value }: { label: string; value: string }) {
   return (
     <Card className="rounded-2xl p-5">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-zinc-50">{value}</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
     </Card>
   );
 }
@@ -357,20 +384,39 @@ function MetaRow({
   icon,
   label,
   value,
+  valueTitle,
+  mono = false,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
+  valueTitle?: string;
+  mono?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-border bg-panel-strong/55 px-3 py-3">
-      <div className="mt-0.5 text-zinc-500">{icon}</div>
-      <div className="space-y-1">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-zinc-500">{label}</p>
-        <p className="text-sm leading-6 text-zinc-200">{value}</p>
+    <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-border bg-panel-strong/55 px-3 py-3">
+      <div className="mt-0.5 shrink-0 text-muted-foreground">{icon}</div>
+      <div className="min-w-0 space-y-1">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+        <p
+          className={`min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-6 text-foreground/88 ${
+            mono ? 'font-mono text-[13px]' : ''
+          }`}
+          title={valueTitle ?? value}
+        >
+          {value}
+        </p>
       </div>
     </div>
   );
+}
+
+function abbreviateMetaValue(value: string, edgeLength = 10) {
+  if (value.length <= edgeLength * 2 + 3) {
+    return value;
+  }
+
+  return `${value.slice(0, edgeLength)}...${value.slice(-edgeLength)}`;
 }
 
 export function IssueDetailSkeleton() {

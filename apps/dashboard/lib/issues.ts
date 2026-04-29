@@ -24,12 +24,18 @@ export interface IssueBreakdownItem {
   count: number;
 }
 
+export interface IssueFrequencyPoint {
+  occurredAt: string;
+  count: number;
+}
+
 export interface IssueDetail {
   issue: Omit<IssueListItem, 'totalEvents'>;
   totalEvents: number;
   affectedUsers: number;
   browserBreakdown: IssueBreakdownItem[];
   osBreakdown: IssueBreakdownItem[];
+  frequencySeries?: IssueFrequencyPoint[];
   stackTrace: string;
 }
 
@@ -40,6 +46,10 @@ export interface IssueAnalysisResult {
   rootCause: string;
   suggestedFix: string;
   confidence: 'low' | 'medium' | 'high';
+  confidenceScore: number;
+  evidence: string[];
+  waysToImproveConfidence: string[];
+  fallbackReason?: string;
 }
 
 export interface IssueGroupingRunResult {

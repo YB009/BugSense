@@ -9,9 +9,11 @@ import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SectionHeader } from '../../components/ui/SectionHeader';
 import { StatTile } from '../../components/ui/StatTile';
+import { ClearTodayIssuesButton } from '../../components/issues/ClearTodayIssuesButton';
 
 export default async function DashboardPage() {
   const token = await getDashboardAccessToken();
+  const apiUrl = getDashboardApiUrl();
   const [issuesResult, projectsResult, recentEventsResult] = await Promise.allSettled([
     fetchIssues(),
     fetchProjects(),
@@ -95,9 +97,12 @@ export default async function DashboardPage() {
                 The highest-signal clusters for the current workspace.
               </p>
             </div>
-            <Link className="ghost-button" href="/grouping">
-              View all grouped issues
-            </Link>
+            <div className="flex flex-wrap items-start justify-end gap-3">
+              <ClearTodayIssuesButton apiUrl={apiUrl} token={token} />
+              <Link className="ghost-button" href="/grouping">
+                View all grouped issues
+              </Link>
+            </div>
           </div>
           {issues.length === 0 ? (
             <EmptyState

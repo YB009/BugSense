@@ -11,7 +11,10 @@ export function getApiGatewayRuntimeConfig() {
     port: parsePort(process.env.PORT, 3000),
     dashboardOrigin: requireUrlEnv('BUGSENSE_DASHBOARD_URL'),
     allowedOrigins,
-    alertServiceUrl: requireUrlEnv('ALERT_SERVICE_URL'),
+    alertServiceUrl: resolveServiceUrl(
+      requireUrlEnv('ALERT_SERVICE_URL'),
+      process.env.ALERT_SERVICE_HTTP_PORT,
+    ),
     tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
     tcpPort: parsePort(process.env.TCP_PORT, 4000),
     ingestionTcpHost: process.env.INGESTION_TCP_HOST ?? '127.0.0.1',
@@ -69,6 +72,17 @@ function requireUrlEnv(name: string) {
   } catch {
     throw new Error(`${name} must be a valid URL`);
   }
+}
+
+function resolveServiceUrl(value: string, portOverride: string | undefined) {
+  if (!portOverride?.trim()) {
+    return value;
+  }
+
+  const url = new URL(value);
+  url.port = String(parsePort(portOverride, Number(url.port) || 80));
+
+  return url.toString().replace(/\/$/, '');
 }
 
 function resolveIssuesStoragePath(value: string | undefined) {

@@ -139,7 +139,7 @@ services:
       TCP_HOST: 0.0.0.0
       TCP_PORT: 4001
       ALERT_TCP_HOST: alert-service
-      ALERT_TCP_PORT: 4002
+      ALERT_TCP_PORT: 3002
       REDIS_HOST: redis
       REDIS_PORT: 6379
       CLICKHOUSE_URL: http://clickhouse:8123

@@ -12,7 +12,6 @@ import {
 import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
 import { JwtUser } from '../auth/auth.service';
-import { getApiGatewayRuntimeConfig } from '../config/runtime-config';
 import { WorkspaceStoreService } from '../auth/workspace-store.service';
 
 @Injectable()
@@ -47,7 +46,7 @@ export class ProjectsService {
 
   async listProjectsForUser(user: JwtUser) {
     if (!this.workspaceStore.isAvailable()) {
-      return this.buildFallbackProjects(user.projectIds);
+      return [];
     }
 
     const workspace = await this.workspaceStore.getUserWithProjects(user.sub).catch((error) => {
@@ -59,7 +58,7 @@ export class ProjectsService {
     });
 
     if (!workspace) {
-      return this.buildFallbackProjects(user.projectIds);
+      return [];
     }
 
     return (
@@ -96,16 +95,5 @@ export class ProjectsService {
 
   async getAlertRecipientEmails(projectId: string) {
     return this.workspaceStore.getAlertRecipientEmails(projectId);
-  }
-
-  private buildFallbackProjects(projectIds: string[]) {
-    const config = getApiGatewayRuntimeConfig();
-
-    return projectIds.map((projectId) => ({
-      id: projectId,
-      name: `${projectId} project`,
-      apiKey: config.projectApiKeys[projectId] ?? '',
-      createdAt: new Date(0).toISOString(),
-    }));
   }
 }

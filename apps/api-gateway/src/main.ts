@@ -13,20 +13,45 @@ async function bootstrap() {
   const config = getApiGatewayRuntimeConfig();
   const { AppModule } = await import('./app.module');
   const app = await NestFactory.create(AppModule);
-  app.enableCors({
-    origin(
-      origin: string | undefined,
-      callback: (error: Error | null, allow?: boolean) => void,
-    ) {
-      if (!origin || isAllowedOrigin(origin, config.allowedOrigins)) {
-        callback(null, true);
+  app.use((request: CorsRequest, response: CorsResponse, next: () => void) => {
+    const origin = Array.isArray(request.headers.origin)
+      ? request.headers.origin[0]
+      : request.headers.origin;
+
+    if (!origin) {
+      next();
+      return;
+    }
+
+    const isIngestRequest =
+      request.path === '/ingest' || request.path.startsWith('/ingest/');
+    const allowOrigin =
+      isIngestRequest || isAllowedOrigin(origin, config.allowedOrigins);
+
+    if (!allowOrigin) {
+      if (request.method === 'OPTIONS') {
+        response.status(403).send('Origin is not allowed by CORS.');
         return;
       }
 
-      callback(new Error(`Origin ${origin} is not allowed by CORS.`), false);
-    },
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-bugsense-api-key'],
+      next();
+      return;
+    }
+
+    response.setHeader('Access-Control-Allow-Origin', origin);
+    response.setHeader('Vary', 'Origin');
+    response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    response.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type,Authorization,x-bugsense-api-key',
+    );
+
+    if (request.method === 'OPTIONS') {
+      response.status(204).send();
+      return;
+    }
+
+    next();
   });
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -51,4 +76,19 @@ function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
   }
 
   return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+}
+
+interface CorsRequest {
+  method: string;
+  path: string;
+  headers: {
+    origin?: string | string[];
+  };
+}
+
+interface CorsResponse {
+  setHeader(name: string, value: string): void;
+  status(code: number): {
+    send(body?: string): void;
+  };
 }

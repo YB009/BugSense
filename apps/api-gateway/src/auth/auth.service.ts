@@ -227,6 +227,27 @@ export class AuthService {
     try {
       const user = await this.jwtService.verifyAsync<JwtUser>(token);
       if (Array.isArray(user.projectIds)) {
+        if (this.workspaceStore.isAvailable()) {
+          const workspace = await this.workspaceStore
+            .getUserWithProjects(user.sub)
+            .catch((error) => {
+              if (!(error instanceof ServiceUnavailableException)) {
+                throw error;
+              }
+
+              return null;
+            });
+
+          if (workspace) {
+            return {
+              ...user,
+              sub: workspace.user.id,
+              email: workspace.user.email,
+              projectIds: workspace.projects.map((project) => project.id),
+            };
+          }
+        }
+
         if (
           user.role === 'admin' &&
           user.email === getApiGatewayRuntimeConfig().dashboardAdminEmail &&
@@ -303,7 +324,9 @@ export class AuthService {
   }
 
   private getFallbackProjectIds() {
-    return ['*'];
+    return Object.keys(getApiGatewayRuntimeConfig().projectApiKeys).filter(
+      Boolean,
+    );
   }
 }
 

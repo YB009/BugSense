@@ -276,7 +276,14 @@ export class IssuesService {
         );
       }
 
-      return (await response.json()) as IssueGroupingRunResult;
+      const result = (await response.json()) as IssueGroupingRunResult;
+      await this.saveIssuesPayload({
+        count: result.groupedCount,
+        generatedAt: result.generatedAt,
+        issues: result.issues,
+      });
+
+      return result;
     } catch (error) {
       if (error instanceof BadGatewayException) {
         throw error;

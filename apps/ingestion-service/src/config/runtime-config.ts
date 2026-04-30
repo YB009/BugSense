@@ -3,10 +3,10 @@ import { resolveWorkspacePath } from '@bugsense/config';
 export function getIngestionRuntimeConfig() {
   return {
     port: parsePort(process.env.PORT, 3001),
-    tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
+    tcpHost: normalizeBindHost(process.env.TCP_HOST ?? '127.0.0.1'),
     tcpPort: parsePort(process.env.TCP_PORT, 4001),
     alertTcpHost: process.env.ALERT_TCP_HOST ?? '127.0.0.1',
-    alertTcpPort: parsePort(process.env.ALERT_TCP_PORT, 4002),
+    alertTcpPort: parsePort(process.env.ALERT_TCP_PORT, 3002),
     clickhouseUrl: requireUrlEnv('CLICKHOUSE_URL'),
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
     clickhouseUser: process.env.CLICKHOUSE_USER,
@@ -52,6 +52,10 @@ function parsePort(value: string | undefined, fallback: number) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeBindHost(value: string) {
+  return value === '0.0.0.0' ? '::' : value;
 }
 
 function parseRedisConnection() {

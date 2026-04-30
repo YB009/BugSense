@@ -17,7 +17,7 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.listen(config.port, '0.0.0.0');
+  await app.listen(config.port, '::');
   await registerDevServicePort({
     serviceName: 'alert-service',
     port: config.port,

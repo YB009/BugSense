@@ -15,7 +15,7 @@ export function getApiGatewayRuntimeConfig() {
       requireUrlEnv('ALERT_SERVICE_URL'),
       process.env.ALERT_SERVICE_HTTP_PORT,
     ),
-    tcpHost: process.env.TCP_HOST ?? '127.0.0.1',
+    tcpHost: normalizeBindHost(process.env.TCP_HOST ?? '127.0.0.1'),
     tcpPort: parsePort(process.env.TCP_PORT, 4000),
     ingestionTcpHost: process.env.INGESTION_TCP_HOST ?? '127.0.0.1',
     ingestionTcpPort: parsePort(process.env.INGESTION_TCP_PORT, 4001),
@@ -104,6 +104,10 @@ function parsePort(value: string | undefined, fallback: number) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeBindHost(value: string) {
+  return value === '0.0.0.0' ? '::' : value;
 }
 
 function parseAllowedOrigins(value: string) {

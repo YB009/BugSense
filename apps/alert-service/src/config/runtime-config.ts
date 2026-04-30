@@ -14,7 +14,7 @@ export function getAlertRuntimeConfig() {
 
   return {
     port: parsePort(process.env.ALERT_HTTP_PORT ?? process.env.PORT, 3003),
-    tcpHost: process.env.TCP_HOST ?? '0.0.0.0',
+    tcpHost: normalizeBindHost(process.env.TCP_HOST ?? '::'),
     tcpPort: parsePort(process.env.ALERT_TCP_PORT ?? process.env.TCP_PORT, 3002),
     clickhouseUrl: requireUrlEnv('CLICKHOUSE_URL'),
     clickhouseDb: process.env.CLICKHOUSE_DB ?? 'bugsense',
@@ -88,6 +88,10 @@ function parsePort(value: string | undefined, fallback: number) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeBindHost(value: string) {
+  return value === '0.0.0.0' ? '::' : value;
 }
 
 function parseRedisConnection() {

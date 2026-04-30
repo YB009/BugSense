@@ -10,7 +10,6 @@ export interface GroupingRunnerProps {
   token: string;
 }
 
-const STORAGE_PREFIX = 'bugsense:grouping-result:';
 const GROUPING_RUN_TIMEOUT_MS = 70_000;
 
 export function GroupingRunner({
@@ -26,12 +25,8 @@ export function GroupingRunner({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setResult(initialResult ?? readTodayResult());
+    setResult(initialResult);
   }, [initialResult]);
-
-  useEffect(() => {
-    writeTodayResult(result);
-  }, [result]);
 
   function handleRun() {
     if (isRunning) {
@@ -149,71 +144,4 @@ export function GroupingRunner({
       ) : null}
     </section>
   );
-}
-
-function readTodayResult() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    clearOldGroupingKeys();
-    const raw = window.localStorage.getItem(storageKey());
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as IssueGroupingRunResult;
-    return isToday(parsed.generatedAt) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeTodayResult(result: IssueGroupingRunResult | null) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    if (!result || !isToday(result.generatedAt)) {
-      window.localStorage.removeItem(storageKey());
-      return;
-    }
-
-    window.localStorage.setItem(storageKey(), JSON.stringify(result));
-  } catch {
-    // Storage failures should not block grouping.
-  }
-}
-
-function storageKey() {
-  return `${STORAGE_PREFIX}${todayKey()}`;
-}
-
-function todayKey() {
-  return dateKey(new Date());
-}
-
-function isToday(value: string) {
-  return dateKey(new Date(value)) === todayKey();
-}
-
-function dateKey(date: Date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-');
-}
-
-function clearOldGroupingKeys() {
-  const currentKey = storageKey();
-
-  for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
-    const key = window.localStorage.key(index);
-    if (key?.startsWith(STORAGE_PREFIX) && key !== currentKey) {
-      window.localStorage.removeItem(key);
-    }
-  }
 }

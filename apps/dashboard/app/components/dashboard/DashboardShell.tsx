@@ -112,7 +112,7 @@ export function DashboardShell({
                   href={href}
                   key={href}
                   onClick={() => setMobileOpen(false)}
-                  prefetch
+                  prefetch={false}
                 >
                   <Icon className={cn('size-4', active ? 'text-info' : 'text-muted-foreground group-hover:text-foreground')} />
                   <span className="flex-1">{label}</span>

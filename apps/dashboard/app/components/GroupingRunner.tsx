@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { IssueGroupingRunResult } from '../../lib/issues';
 
 export interface GroupingRunnerProps {
@@ -17,6 +18,7 @@ export function GroupingRunner({
   initialResult,
   token,
 }: GroupingRunnerProps) {
+  const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<IssueGroupingRunResult | null>(
     initialResult,
@@ -83,6 +85,7 @@ export function GroupingRunner({
 
         const payload = (await response.json()) as IssueGroupingRunResult;
         setResult(payload);
+        router.refresh();
       } catch (caughtError) {
         setError(
           caughtError instanceof Error

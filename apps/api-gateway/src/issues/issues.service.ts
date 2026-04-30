@@ -266,7 +266,7 @@ export class IssuesService {
         headers: {
           'Content-Type': 'application/json',
         },
-        signal: AbortSignal.timeout(8_000),
+        signal: AbortSignal.timeout(GROUPING_RUN_TIMEOUT_MS),
       });
 
       if (!response.ok) {
@@ -522,6 +522,8 @@ export class IssuesService {
     return clearedEvents;
   }
 }
+
+const GROUPING_RUN_TIMEOUT_MS = 60_000;
 
 function buildClickHouseHeaders(config: ReturnType<typeof getApiGatewayRuntimeConfig>) {
   const headers: Record<string, string> = {

@@ -10,6 +10,7 @@ export interface GroupingRunnerProps {
 }
 
 const STORAGE_PREFIX = 'bugsense:grouping-result:';
+const GROUPING_RUN_TIMEOUT_MS = 70_000;
 
 export function GroupingRunner({
   apiUrl,
@@ -46,7 +47,7 @@ export function GroupingRunner({
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(GROUPING_RUN_TIMEOUT_MS),
         });
 
         if (!response.ok) {

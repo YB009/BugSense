@@ -1,35 +1,78 @@
-# Bugsense
+<div align="center">
+  <img src="docs/assets/bugsense-logo.svg" alt="BugSense logo" width="96" height="96" />
+  <h1>BugSense Observability</h1>
+  <p>
+    Project-scoped error monitoring for JavaScript apps, with live ingestion,
+    grouped issue triage, source maps, alerting, and Gemini-assisted diagnosis.
+  </p>
+  <p>
+    <a href="https://bugsensedashboard-production.up.railway.app"><strong>Live Dashboard</strong></a>
+    &middot;
+    <a href="https://www.npmjs.com/package/@bugsense/bugsense-js"><strong>npm SDK</strong></a>
+  </p>
+  <p>
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.x-3178c6?style=flat-square&logo=typescript&logoColor=white" />
+    <img alt="NestJS" src="https://img.shields.io/badge/NestJS-API%20Gateway%20%2B%20Services-e0234e?style=flat-square&logo=nestjs&logoColor=white" />
+    <img alt="Next.js" src="https://img.shields.io/badge/Next.js-Dashboard-000000?style=flat-square&logo=nextdotjs&logoColor=white" />
+    <img alt="ClickHouse" src="https://img.shields.io/badge/ClickHouse-Events-ffcc01?style=flat-square&logo=clickhouse&logoColor=black" />
+    <img alt="Redis" src="https://img.shields.io/badge/Redis-Queues-dc382d?style=flat-square&logo=redis&logoColor=white" />
+    <img alt="Railway" src="https://img.shields.io/badge/Railway-Deployed-0b0d0e?style=flat-square&logo=railway&logoColor=white" />
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" />
+  </p>
+</div>
 
-Bugsense is a self-hosted error monitoring and triage platform for JavaScript applications. It combines a browser/Node SDK, a NestJS microservice backend, ClickHouse event storage, Redis-backed alert processing, a Next.js dashboard, project-scoped API keys, live event streams, AI-assisted issue grouping, and on-demand root-cause analysis.
+---
+
+BugSense is a self-hosted error monitoring and triage platform for JavaScript applications. It combines a browser/Node SDK, a NestJS microservice backend, ClickHouse event storage, Redis-backed alert processing, a Next.js dashboard, project-scoped API keys, live event streams, AI-assisted issue grouping, and on-demand root-cause analysis.
 
 The system is designed around project isolation: every monitored app or environment gets its own project ID and API key, while the dashboard keeps issues, live events, credentials, and grouped clusters scoped to the current workspace.
 
-## Live Project Links
+## Hosted Project
 
-- Hosted dashboard: https://bugsensedashboard-production.up.railway.app
-- JavaScript SDK on npm: https://www.npmjs.com/package/@bugsense/bugsense-js
+| Resource | Link |
+| --- | --- |
+| Live dashboard | https://bugsensedashboard-production.up.railway.app |
+| JavaScript SDK | https://www.npmjs.com/package/@bugsense/bugsense-js |
+| Ingest endpoint | `https://bugsenseapi-gateway-production.up.railway.app/ingest` |
+| Source map endpoint | `https://bugsenseapi-gateway-production.up.railway.app/sourcemaps` |
 
-## Hosted Dashboard Quick Start
+## How To Navigate The Live Dashboard
 
-Use the hosted dashboard first if you want to try Bugsense without running the monorepo locally.
+Use the hosted dashboard first if you want to try BugSense before running the monorepo locally.
 
-1. Open the dashboard:
+### 1. Create Or Open A Workspace
+
+Open:
 
 ```text
 https://bugsensedashboard-production.up.railway.app
 ```
 
-2. Sign in or create an account.
-3. Open `Projects` from the sidebar.
-4. Create a project for the app you want to monitor.
-5. Copy the generated `Project ID` and `API key`.
-6. Install the SDK in your app:
+Sign in, then land in the protected workspace. The sidebar is the main navigation surface.
+
+### 2. Create A Project
+
+Go to `Projects`, create a project for the app or environment you want to monitor, then copy:
+
+- `Project ID`
+- `API key`
+- generated SDK snippet
+
+Each project has isolated credentials and a scoped event stream.
+
+### 3. Install The SDK
 
 ```bash
 npm install @bugsense/bugsense-js
 ```
 
-7. Add the SDK client:
+or:
+
+```bash
+pnpm add @bugsense/bugsense-js
+```
+
+### 4. Connect Your App
 
 ```ts
 import { BugSense } from '@bugsense/bugsense-js';
@@ -43,19 +86,21 @@ export const bugsense = new BugSense({
 });
 ```
 
-8. Trigger a test event:
+### 5. Send A Smoke Test
 
 ```ts
 void bugsense.captureMessage('BugSense smoke test connected');
 ```
 
-9. Return to the dashboard and use these sections:
+### 6. Follow The Event Through The Dashboard
 
-- `Overview`: workspace summary, live events, recent grouped issues, and project activity.
-- `Projects`: create projects, copy credentials, and inspect project-scoped events.
-- `Issues`: view grouped error clusters and open issue detail pages.
-- `Grouping`: manually run issue grouping after sending test events.
-- Issue detail pages: inspect stack traces, event frequency, affected users, and run AI analysis when Gemini is configured.
+| Dashboard Area | What To Use It For |
+| --- | --- |
+| `Overview` | Workspace summary, live errors, project activity, and recent grouped issues. |
+| `Projects` | Project creation, credentials, API keys, SDK snippet, and scoped project events. |
+| `Grouping` | Manually cluster recent raw events into grouped issues. |
+| `Issues` | Triage grouped clusters, filter by project/status/environment/severity, and open detail pages. |
+| Issue detail | Inspect stack traces, event frequency, affected users, recent snapshots, and AI analysis. |
 
 Recommended first path:
 
@@ -65,8 +110,8 @@ Projects -> Create project -> Copy SDK snippet -> Trigger test event -> Overview
 
 ## Table Of Contents
 
-- [Live Project Links](#live-project-links)
-- [Hosted Dashboard Quick Start](#hosted-dashboard-quick-start)
+- [Hosted Project](#hosted-project)
+- [How To Navigate The Live Dashboard](#how-to-navigate-the-live-dashboard)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Repository Structure](#repository-structure)

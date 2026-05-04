@@ -1,0 +1,4 @@
+<svg aria-label="BugSense Logo" fill="none" height="96" role="img" viewBox="0 0 32 32" width="96" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="8" fill="#0b1220"/>
+  <path d="M8 4H20L25 8.5V12L22 15.5L25 19V23.5L20 28H8V20.5M8 11.5H2M8 11.5L12 11.5L14 18L17 8L20 14L22 11.5M8 11.5V4M8 11.5V20.5" stroke="#38bdf8" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"/>
+</svg>

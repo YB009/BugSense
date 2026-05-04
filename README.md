@@ -1,9 +1,9 @@
 <div align="center">
   <img src="docs/assets/bugsense-logo.svg" alt="BugSense logo" width="96" height="96" />
-  <h1>BugSense Observability</h1>
+  <h1>BugSense</h1>
   <p>
-    Project-scoped error monitoring for JavaScript apps, with live ingestion,
-    grouped issue triage, source maps, alerting, and Gemini-assisted diagnosis.
+    Error monitoring program for React/Next apps, with live ingestion,
+    grouped issues, alerting, and Gemini-assisted diagnosis.
   </p>
   <p>
     <a href="https://bugsensedashboard-production.up.railway.app"><strong>Live Dashboard</strong></a>
@@ -112,21 +112,59 @@ Projects -> Create project -> Copy SDK snippet -> Trigger test event -> Overview
 
 - [Hosted Project](#hosted-project)
 - [How To Navigate The Live Dashboard](#how-to-navigate-the-live-dashboard)
+  - [1. Create Or Open A Workspace](#1-create-or-open-a-workspace)
+  - [2. Create A Project](#2-create-a-project)
+  - [3. Install The SDK](#3-install-the-sdk)
+  - [4. Connect Your App](#4-connect-your-app)
+  - [5. Send A Smoke Test](#5-send-a-smoke-test)
+  - [6. Follow The Event Through The Dashboard](#6-follow-the-event-through-the-dashboard)
+- [Table Of Contents](#table-of-contents)
 - [Features](#features)
 - [Architecture](#architecture)
+  - [Services](#services)
+  - [Data Stores](#data-stores)
 - [Repository Structure](#repository-structure)
 - [Prerequisites](#prerequisites)
 - [Local Setup](#local-setup)
 - [Environment Variables](#environment-variables)
+  - [Root `.env`](#root-env)
+  - [Dashboard](#dashboard)
+  - [API Gateway](#api-gateway)
+  - [Ingestion Service](#ingestion-service)
+  - [Alert Service](#alert-service)
 - [Running The App](#running-the-app)
 - [Dashboard Workflow](#dashboard-workflow)
 - [SDK Integration](#sdk-integration)
+  - [Browser Or Vite App](#browser-or-vite-app)
+  - [React Error Boundary](#react-error-boundary)
+  - [Axios](#axios)
+  - [Node](#node)
 - [Source Maps](#source-maps)
 - [Issue Grouping And AI Analysis](#issue-grouping-and-ai-analysis)
+  - [Manual Grouping](#manual-grouping)
+  - [On-Demand AI Analysis](#on-demand-ai-analysis)
 - [Alerts](#alerts)
 - [Railway Deployment](#railway-deployment)
+  - [Build Commands](#build-commands)
+  - [Railway Variables](#railway-variables)
+    - [Dashboard](#dashboard-1)
+    - [API Gateway](#api-gateway-1)
+    - [Ingestion Service](#ingestion-service-1)
+    - [Alert Service](#alert-service-1)
+  - [Production Integration Endpoint](#production-integration-endpoint)
 - [Troubleshooting](#troubleshooting)
+  - [`/ingest` returns 401](#ingest-returns-401)
+  - [Browser preflight to `/ingest` fails](#browser-preflight-to-ingest-fails)
+  - [Dashboard shows `* project` or `1/1/1970`](#dashboard-shows--project-or-111970)
+  - [Grouping fails with `fetch failed`](#grouping-fails-with-fetch-failed)
+  - [Grouping page shows issues but Issues page is empty](#grouping-page-shows-issues-but-issues-page-is-empty)
+  - [Issue detail AI panel says Gemini key is missing](#issue-detail-ai-panel-says-gemini-key-is-missing)
+  - [Grouping produces no issues](#grouping-produces-no-issues)
+  - [Railway service-to-service traffic fails](#railway-service-to-service-traffic-fails)
+  - [Secrets were accidentally exposed](#secrets-were-accidentally-exposed)
 - [Useful Commands](#useful-commands)
+- [Security Notes](#security-notes)
+- [License](#license)
 
 ## Features
 

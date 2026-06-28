@@ -303,11 +303,16 @@ Default local URLs:
 
 - Dashboard: `http://localhost:3005`
 - API gateway: `http://localhost:3000`
+- API gateway database keepalive: `http://localhost:3000/health/db`
 - Ingestion service health: `http://localhost:3001/events/health`
 - Alert service health: `http://localhost:3003/rules/health`
 - ClickHouse HTTP: `http://localhost:8123`
 - Redis: `127.0.0.1:6379`
 - Postgres: `127.0.0.1:5432`
+
+For hosted environments that pause inactive databases, point an external cron
+ping at the API gateway `GET /health/db` endpoint. It performs a lightweight
+Postgres `SELECT 1` and returns `200` only when the database responds.
 
 ## Environment Variables
 

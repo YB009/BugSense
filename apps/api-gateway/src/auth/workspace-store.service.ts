@@ -67,6 +67,16 @@ export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
     return this.available && Boolean(this.pool);
   }
 
+  async pingDatabase() {
+    const startedAt = Date.now();
+    await this.query('SELECT 1');
+
+    return {
+      status: 'ok',
+      latencyMs: Date.now() - startedAt,
+    };
+  }
+
   async ensureUserWithDefaultProject(input: {
     email: string;
     name?: string | null;
@@ -375,12 +385,18 @@ export class WorkspaceStoreService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    return this.pool.query<T>(sql, values).catch((error) => {
-      this.available = false;
-      throw new ServiceUnavailableException(
-        error instanceof Error ? error.message : 'Workspace database is unavailable',
-      );
-    });
+    return this.pool
+      .query<T>(sql, values)
+      .then((result) => {
+        this.available = true;
+        return result;
+      })
+      .catch((error) => {
+        this.available = false;
+        throw new ServiceUnavailableException(
+          error instanceof Error ? error.message : 'Workspace database is unavailable',
+        );
+      });
   }
 
   private createPool() {

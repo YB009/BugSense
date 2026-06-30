@@ -5,8 +5,6 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --font-geist-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-geist-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --panel: 240 7% 7.8%;
@@ -496,6 +494,179 @@
     @apply hidden border-r border-border p-5 backdrop-blur-xl lg:flex lg:w-64 lg:flex-col;
     background-color: hsl(var(--panel) / 0.9);
   }
+
+  .landing-page {
+    isolation: isolate;
+  }
+
+  .landing-page::before {
+    content: '';
+    @apply pointer-events-none fixed inset-0 -z-10;
+    background:
+      radial-gradient(circle at 70% 12%, hsl(var(--surface-glow-primary) / 0.16), transparent 28%),
+      radial-gradient(circle at 16% 42%, hsl(var(--surface-glow-secondary) / 0.08), transparent 24%),
+      hsl(var(--background));
+  }
+
+  .landing-band-dark,
+  html[data-theme='light'] .landing-band-light {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --panel: 240 7% 7.8%;
+    --panel-strong: 240 6% 10.6%;
+    --panel-elevated: 240 5% 13%;
+    --muted: 240 4% 14.5%;
+    --muted-foreground: 240 5% 64.9%;
+    --border: 240 5.9% 16%;
+    --border-strong: 240 4.8% 28%;
+    --surface-grid-line: 0 0% 100%;
+    --surface-grid-opacity: 0.03;
+    --surface-grid-strength: 0.35;
+    --surface-scan: 0 0% 100%;
+    --surface-scan-opacity: 0.1;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .landing-band-light,
+  html[data-theme='light'] .landing-band-dark {
+    --background: 210 20% 98%;
+    --foreground: 224 19% 10%;
+    --panel: 0 0% 100%;
+    --panel-strong: 210 20% 99%;
+    --panel-elevated: 0 0% 100%;
+    --muted: 210 20% 96.5%;
+    --muted-foreground: 222 10% 42%;
+    --border: 220 13% 91%;
+    --border-strong: 220 9% 80%;
+    --surface-grid-line: 224 19% 10%;
+    --surface-grid-opacity: 0.05;
+    --surface-grid-strength: 0.2;
+    --surface-scan: 224 19% 10%;
+    --surface-scan-opacity: 0.06;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .landing-hero {
+    min-height: calc(100svh - 4rem);
+  }
+
+  .landing-grid {
+    background-image:
+      linear-gradient(hsl(var(--surface-grid-line) / var(--surface-grid-opacity)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--surface-grid-line) / var(--surface-grid-opacity)) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(180deg, black, transparent 84%);
+    opacity: var(--surface-grid-strength);
+  }
+
+  .landing-orbital-globe {
+    opacity: 0.9;
+    mix-blend-mode: normal;
+    mask-image:
+      radial-gradient(circle at 62% 48%, black 0%, black 56%, transparent 84%),
+      linear-gradient(180deg, transparent 0%, black 16%, black 72%, transparent 100%);
+  }
+
+  .landing-rotating-word {
+    min-width: 7.9em;
+  }
+
+  .landing-word-slide {
+    animation: landing-word-slide 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .landing-scan {
+    animation: scan 4.8s linear infinite;
+    background: linear-gradient(180deg, transparent, hsl(var(--surface-scan) / var(--surface-scan-opacity)), transparent);
+    pointer-events: none;
+  }
+
+  .landing-rise {
+    animation: landing-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .landing-terminal {
+    animation-delay: 90ms;
+  }
+
+  .landing-terminal::before {
+    content: '';
+    @apply pointer-events-none absolute inset-0 rounded-2xl;
+    box-shadow:
+      inset 0 1px 0 hsl(var(--foreground) / 0.04),
+      0 0 80px hsl(var(--info) / 0.08);
+  }
+
+  .landing-marquee {
+    @apply relative overflow-hidden;
+    mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  }
+
+  .landing-marquee-track {
+    display: inline-flex;
+    min-width: max-content;
+    animation: landing-marquee 26s linear infinite;
+  }
+
+  .landing-marquee:hover .landing-marquee-track {
+    animation-play-state: paused;
+  }
+
+  .landing-footer-top {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .landing-footer-bottom {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  html[data-theme='light'] .landing-footer-top {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  html[data-theme='light'] .landing-footer-bottom {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes landing-word-slide {
+  from {
+    opacity: 0;
+    transform: translateY(58%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -509,5 +680,22 @@
 
   .issue-list-meta {
     text-align: left;
+  }
+
+  .landing-hero {
+    min-height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-rise,
+  .landing-marquee-track,
+  .landing-scan,
+  .landing-word-slide {
+    animation: none;
+  }
+
+  .landing-orbital-globe {
+    opacity: 0.55;
   }
 }

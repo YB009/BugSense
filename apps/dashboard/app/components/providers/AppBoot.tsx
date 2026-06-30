@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { BugSenseLogo } from '../ui/Logo';
@@ -8,10 +9,17 @@ import { BugSenseLogo } from '../ui/Logo';
 const BOOT_KEY = 'bugsense-dashboard-booted';
 
 export function AppBoot({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const reducedMotion = useReducedMotion();
   const [showSplash, setShowSplash] = useState(true);
+  const isPublicLanding = pathname === '/';
 
   useEffect(() => {
+    if (isPublicLanding) {
+      setShowSplash(false);
+      return;
+    }
+
     const alreadyBooted = window.sessionStorage.getItem(BOOT_KEY);
     if (alreadyBooted) {
       setShowSplash(false);
@@ -24,7 +32,7 @@ export function AppBoot({ children }: { children: ReactNode }) {
     }, reducedMotion ? 60 : 280);
 
     return () => window.clearTimeout(timeout);
-  }, [reducedMotion]);
+  }, [isPublicLanding, reducedMotion]);
 
   return (
     <>

@@ -17,11 +17,61 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.listen(config.port, '::');
+  const maxPort = config.port + 20;
+  let httpPort = config.port;
+  const reservedPorts = new Set([
+    3000,
+    3001,
+    3002,
+    4000,
+    4001,
+    config.tcpPort,
+  ]);
+
+  while (true) {
+    try {
+      await app.listen(httpPort, '::');
+      break;
+    } catch (error) {
+      const isBusyPort =
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'EADDRINUSE';
+
+      if (!isBusyPort || httpPort >= maxPort) {
+        throw error;
+      }
+
+      httpPort = nextCandidatePort(httpPort, reservedPorts, maxPort);
+    }
+  }
+
   await registerDevServicePort({
     serviceName: 'alert-service',
-    port: config.port,
+    port: httpPort,
   });
+
+  if (httpPort !== config.port) {
+    console.log(
+      `Alert service HTTP port ${config.port} is busy. Using ${httpPort} instead.`,
+    );
+  } else {
+    console.log(`Alert service HTTP server listening on port ${httpPort}`);
+  }
 }
 
 void bootstrap();
+
+function nextCandidatePort(
+  currentPort: number,
+  reservedPorts: Set<number>,
+  maxPort: number,
+) {
+  let candidate = currentPort + 1;
+
+  while (candidate <= maxPort && reservedPorts.has(candidate)) {
+    candidate += 1;
+  }
+
+  return candidate;
+}

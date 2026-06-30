@@ -14,6 +14,7 @@ import {
   HarmBlockThreshold,
   HarmCategory,
 } from '@google/generative-ai';
+import { getRegisteredDevServiceUrl } from '@bugsense/config';
 import {
   GroupedIssue,
   IssueAnalysisResult,
@@ -259,7 +260,10 @@ export class IssuesService {
   }
 
   async runGrouping(): Promise<IssueGroupingRunResult> {
-    const alertServiceUrl = this.config.alertServiceUrl;
+    const alertServiceUrl = getRegisteredDevServiceUrl(
+      'alert-service',
+      this.config.alertServiceUrl,
+    );
     try {
       const response = await fetch(`${alertServiceUrl}/issues/grouping/run`, {
         method: 'POST',

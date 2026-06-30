@@ -1,4 +1,4 @@
-import { loadEnvFiles } from '@bugsense/config';
+import { loadEnvFiles, registerDevServicePort } from '@bugsense/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { getApiGatewayRuntimeConfig } from './config/runtime-config';
@@ -64,8 +64,47 @@ async function bootstrap() {
   });
 
   await app.startAllMicroservices();
-  await app.listen(config.port, '0.0.0.0');
-  console.log(`API Gateway HTTP server listening on port ${config.port}`);
+  const maxPort = config.port + 20;
+  let httpPort = config.port;
+  const reservedPorts = new Set([
+    3001,
+    3002,
+    3003,
+    4000,
+    4001,
+    config.tcpPort,
+  ]);
+
+  while (true) {
+    try {
+      await app.listen(httpPort, '0.0.0.0');
+      break;
+    } catch (error) {
+      const isBusyPort =
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'EADDRINUSE';
+
+      if (!isBusyPort || httpPort >= maxPort) {
+        throw error;
+      }
+
+      httpPort = nextCandidatePort(httpPort, reservedPorts, maxPort);
+    }
+  }
+
+  await registerDevServicePort({
+    serviceName: 'api-gateway',
+    port: httpPort,
+  });
+
+  if (httpPort !== config.port) {
+    console.log(
+      `API Gateway HTTP port ${config.port} is busy. Using ${httpPort} instead.`,
+    );
+  } else {
+    console.log(`API Gateway HTTP server listening on port ${httpPort}`);
+  }
 }
 
 void bootstrap();
@@ -91,4 +130,18 @@ interface CorsResponse {
   status(code: number): {
     send(body?: string): void;
   };
+}
+
+function nextCandidatePort(
+  currentPort: number,
+  reservedPorts: Set<number>,
+  maxPort: number,
+) {
+  let candidate = currentPort + 1;
+
+  while (candidate <= maxPort && reservedPorts.has(candidate)) {
+    candidate += 1;
+  }
+
+  return candidate;
 }

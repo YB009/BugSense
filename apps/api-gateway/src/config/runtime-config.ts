@@ -1,5 +1,6 @@
 import { resolveWorkspacePath } from '@bugsense/config';
 import { parseProjectApiKeys } from '@bugsense/config';
+import { getRegisteredDevServiceUrl } from '@bugsense/config';
 import { isAbsolute } from 'path';
 
 export function getApiGatewayRuntimeConfig() {
@@ -11,9 +12,12 @@ export function getApiGatewayRuntimeConfig() {
     port: parsePort(process.env.PORT, 3000),
     dashboardOrigin: requireUrlEnv('BUGSENSE_DASHBOARD_URL'),
     allowedOrigins,
-    alertServiceUrl: resolveServiceUrl(
-      requireUrlEnv('ALERT_SERVICE_URL'),
-      process.env.ALERT_SERVICE_HTTP_PORT,
+    alertServiceUrl: getRegisteredDevServiceUrl(
+      'alert-service',
+      resolveServiceUrl(
+        requireUrlEnv('ALERT_SERVICE_URL'),
+        process.env.ALERT_SERVICE_HTTP_PORT,
+      ),
     ),
     tcpHost: normalizeBindHost(process.env.TCP_HOST ?? '127.0.0.1'),
     tcpPort: parsePort(process.env.TCP_PORT, 4000),

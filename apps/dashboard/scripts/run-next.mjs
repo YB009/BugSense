@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const mode = process.argv[2] ?? 'dev';
 const preferredPort = Number(process.env.PORT ?? 3006);
+const maxPort = preferredPort + 20;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextBin = path.resolve(__dirname, '../node_modules/next/dist/bin/next');
 
@@ -22,15 +23,29 @@ function isPortAvailable(port) {
 }
 
 async function main() {
-  const portAvailable = await isPortAvailable(preferredPort);
+  let port = preferredPort;
 
-  if (!portAvailable) {
-    console.error(`Dashboard could not start because port ${preferredPort} is unavailable.`);
+  while (port <= maxPort) {
+    if (await isPortAvailable(port)) {
+      break;
+    }
+
+    port += 1;
+  }
+
+  if (port > maxPort) {
+    console.error(
+      `Dashboard could not start because ports ${preferredPort}-${maxPort} are unavailable.`,
+    );
     process.exit(1);
   }
 
-  const localUrl = `http://localhost:${preferredPort}`;
-  const networkUrl = `http://127.0.0.1:${preferredPort}`;
+  if (port !== preferredPort) {
+    console.log(`Dashboard port ${preferredPort} is busy. Using ${port} instead.`);
+  }
+
+  const localUrl = `http://localhost:${port}`;
+  const networkUrl = `http://127.0.0.1:${port}`;
 
   if (mode === 'dev') {
     console.log('');
@@ -43,13 +58,13 @@ async function main() {
 
   const nodeArgs = [nextBin, mode];
   if (mode === 'dev') nodeArgs.push('--webpack');
-  nodeArgs.push('-p', String(preferredPort));
+  nodeArgs.push('-p', String(port));
 
   const child = spawn(process.execPath, nodeArgs, {
     stdio: 'inherit',
     env: {
       ...process.env,
-      PORT: String(preferredPort),
+      PORT: String(port),
     },
   });
 

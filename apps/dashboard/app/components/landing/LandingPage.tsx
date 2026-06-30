@@ -701,8 +701,8 @@ function IntegrationsMarquee() {
   const row = useMemo(() => [...integrations, ...integrations], []);
 
   return (
-    <section className="landing-band-light px-5 pb-20 sm:px-8">
-      <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-border bg-panel py-6 shadow-panel">
+    <section className="landing-band-light px-5 py-10 sm:px-8">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-2xl border border-border bg-panel py-4 shadow-panel">
         <div className="landing-marquee">
           <div className="landing-marquee-track">
             {row.map((name, index) => (

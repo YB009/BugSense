@@ -1,4 +1,5 @@
 import './globals.css';
+import 'lenis/dist/lenis.css';
 import type { Metadata } from 'next';
 import { JetBrains_Mono, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';

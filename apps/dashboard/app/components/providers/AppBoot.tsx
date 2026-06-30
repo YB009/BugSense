@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { BugSenseLogo } from '../ui/Logo';
+import { LenisProvider } from './LenisProvider';
 
 const BOOT_KEY = 'bugsense-dashboard-booted';
 
@@ -35,7 +36,7 @@ export function AppBoot({ children }: { children: ReactNode }) {
   }, [isPublicLanding, reducedMotion]);
 
   return (
-    <>
+    <LenisProvider>
       {children}
       <AnimatePresence>
         {showSplash ? (
@@ -93,6 +94,6 @@ export function AppBoot({ children }: { children: ReactNode }) {
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </>
+    </LenisProvider>
   );
 }

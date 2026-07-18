@@ -8,7 +8,8 @@ dashboard.
 
 ## Hosted BugSense
 
-- Dashboard: https://bugsensedashboard-production.up.railway.app
+- Website: https://bugsense.owolabidaniel.me/
+- Dashboard: https://bugsense.owolabidaniel.me/
 - API Gateway: https://bugsenseapi-gateway-production.up.railway.app
 - Ingest endpoint: https://bugsenseapi-gateway-production.up.railway.app/ingest
 - Sourcemap endpoint: https://bugsenseapi-gateway-production.up.railway.app/sourcemaps
@@ -18,7 +19,7 @@ dashboard.
 1. Open the hosted dashboard:
 
    ```text
-   https://bugsensedashboard-production.up.railway.app
+   https://bugsense.owolabidaniel.me/
    ```
 
 2. Click **Create account** if this is your first time.
@@ -41,7 +42,7 @@ This keeps your errors separate from other users' errors.
 1. Go to:
 
    ```text
-   https://bugsensedashboard-production.up.railway.app/projects
+   https://bugsense.owolabidaniel.me/projects
    ```
 
 2. Use the **New project name** field.
@@ -251,7 +252,7 @@ For Next.js, upload the directory where your generated `.map` files are emitted.
 Open:
 
 ```text
-https://bugsensedashboard-production.up.railway.app/dashboard
+https://bugsense.owolabidaniel.me/dashboard
 ```
 
 Use these dashboard sections:

@@ -10,9 +10,9 @@ dashboard.
 
 - Website: https://bugsense.owolabidaniel.me/
 - Dashboard: https://bugsense.owolabidaniel.me/
-- API Gateway: https://bugsenseapi-gateway-production.up.railway.app
-- Ingest endpoint: https://bugsenseapi-gateway-production.up.railway.app/ingest
-- Sourcemap endpoint: https://bugsenseapi-gateway-production.up.railway.app/sourcemaps
+- API Gateway: https://bugsenseapi-gateway.owolabidaniel.me
+- Ingest endpoint: https://bugsenseapi-gateway.owolabidaniel.me/ingest
+- Sourcemap endpoint: https://bugsenseapi-gateway.owolabidaniel.me/sourcemaps
 
 ## 1. Create Or Access Your Dashboard Workspace
 
@@ -75,7 +75,7 @@ import { BugSense } from '@bugsense/bugsense-js';
 export const bugsense = new BugSense({
   projectId: 'proj_your_project_id',
   apiKey: 'key_your_project_api_key',
-  endpoint: 'https://bugsenseapi-gateway-production.up.railway.app/ingest',
+  endpoint: 'https://bugsenseapi-gateway.owolabidaniel.me/ingest',
   environment: 'production',
   release: '1.0.0',
 });
@@ -151,7 +151,7 @@ import { BugSense, BugSenseErrorBoundary } from '@bugsense/bugsense-js';
 const bugsense = new BugSense({
   projectId: 'proj_your_project_id',
   apiKey: 'key_your_project_api_key',
-  endpoint: 'https://bugsenseapi-gateway-production.up.railway.app/ingest',
+  endpoint: 'https://bugsenseapi-gateway.owolabidaniel.me/ingest',
   environment: 'production',
   release: '1.0.0',
 });
@@ -179,7 +179,7 @@ import { BugSense, instrumentAxios } from '@bugsense/bugsense-js';
 const bugsense = new BugSense({
   projectId: 'proj_your_project_id',
   apiKey: 'key_your_project_api_key',
-  endpoint: 'https://bugsenseapi-gateway-production.up.railway.app/ingest',
+  endpoint: 'https://bugsenseapi-gateway.owolabidaniel.me/ingest',
   environment: 'production',
   release: '1.0.0',
 });
@@ -198,7 +198,7 @@ import { registerNodeHandlers } from '@bugsense/bugsense-js/node';
 const bugsense = new BugSense({
   projectId: process.env.BUGSENSE_PROJECT_ID!,
   apiKey: process.env.BUGSENSE_API_KEY!,
-  endpoint: 'https://bugsenseapi-gateway-production.up.railway.app/ingest',
+  endpoint: 'https://bugsenseapi-gateway.owolabidaniel.me/ingest',
   environment: process.env.NODE_ENV ?? 'production',
   release: process.env.APP_VERSION ?? 'local',
   autoCapture: false,
@@ -228,7 +228,7 @@ npx bugsense upload-sourcemaps \
   --api-key key_your_project_api_key \
   --release 1.0.0 \
   --dir dist \
-  --endpoint https://bugsenseapi-gateway-production.up.railway.app/sourcemaps
+  --endpoint https://bugsenseapi-gateway.owolabidaniel.me/sourcemaps
 ```
 
 The `--release` value should match the `release` value used by the SDK.
@@ -241,7 +241,7 @@ BUGSENSE_API_KEY=key_your_project_api_key
 npx bugsense upload-sourcemaps \
   --release 1.0.0 \
   --dir dist \
-  --endpoint https://bugsenseapi-gateway-production.up.railway.app/sourcemaps
+  --endpoint https://bugsenseapi-gateway.owolabidaniel.me/sourcemaps
 ```
 
 For Vite, your build output is usually `dist`.
@@ -290,7 +290,7 @@ Check that:
 - The SDK endpoint is exactly:
 
   ```text
-  https://bugsenseapi-gateway-production.up.railway.app/ingest
+  https://bugsenseapi-gateway.owolabidaniel.me/ingest
   ```
 
 - `projectId` matches the selected dashboard project.
@@ -317,7 +317,7 @@ Check that:
 - The sourcemap endpoint is:
 
   ```text
-  https://bugsenseapi-gateway-production.up.railway.app/sourcemaps
+  https://bugsenseapi-gateway.owolabidaniel.me/sourcemaps
   ```
 
 ## License

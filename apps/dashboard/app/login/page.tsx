@@ -1,11 +1,14 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { LoginForm } from './LoginForm';
 import { GoogleAuthButton } from './GoogleAuthButton';
 import { getAuthenticatedUser, getDashboardGoogleClientId } from '../../lib/auth';
 import { Badge } from '../components/ui/Badge';
 import { ThemeToggle } from '../components/theme/ThemeToggle';
 import { BugSenseLogo } from '../components/ui/Logo';
-import Link from 'next/link';
+
+// Reads the session cookie at request time, so it cannot be prerendered.
+export const dynamic = 'force-dynamic';
 
 export default async function LoginPage() {
   const user = await getAuthenticatedUser();

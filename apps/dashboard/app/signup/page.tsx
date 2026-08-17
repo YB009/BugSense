@@ -10,6 +10,9 @@ import { SignupForm } from './SignupForm';
 import { BugSenseLogo } from '../components/ui/Logo';
 import Link from 'next/link';
 
+// Reads the session cookie at request time, so it cannot be prerendered.
+export const dynamic = 'force-dynamic';
+
 export default async function SignupPage() {
   const user = await getAuthenticatedUser();
   const googleClientId = getDashboardGoogleClientId();

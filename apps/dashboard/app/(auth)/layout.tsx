@@ -4,6 +4,10 @@ import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '../../lib/auth';
 import { DashboardShell } from '../components/dashboard/DashboardShell';
 
+// This layout reads the session cookie and the API URL at request time,
+// so every route under it must be rendered on demand, not at build time.
+export const dynamic = 'force-dynamic';
+
 export default async function AuthenticatedLayout({
   children,
 }: Readonly<{

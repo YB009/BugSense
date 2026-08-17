@@ -42,7 +42,7 @@ export function getAlertRuntimeConfig() {
     alertEmailFrom:
       process.env.BUGSENSE_ALERT_EMAIL_FROM ?? 'Bugsense <alerts@example.com>',
     alertEmailRecipients,
-    apiGatewayUrl: requireUrlEnv('BUGSENSE_API_GATEWAY_URL'),
+    apiGatewayUrl: optionalUrlEnv('BUGSENSE_API_GATEWAY_URL'),
     internalServiceToken:
       process.env.BUGSENSE_INTERNAL_SERVICE_TOKEN ??
       'dev-only-internal-token',
@@ -61,7 +61,20 @@ function requireEnv(name: string) {
 
 function requireUrlEnv(name: string) {
   const value = requireEnv(name);
+  return parseUrlEnv(name, value);
+}
 
+function optionalUrlEnv(name: string) {
+  const value = process.env[name]?.trim();
+
+  if (!value) {
+    return undefined;
+  }
+
+  return parseUrlEnv(name, value);
+}
+
+function parseUrlEnv(name: string, value: string) {
   try {
     return new URL(value).toString().replace(/\/$/, '');
   } catch {

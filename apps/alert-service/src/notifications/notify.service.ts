@@ -68,6 +68,13 @@ export class NotifyService {
       return configuredRecipients;
     }
 
+    if (!this.config.apiGatewayUrl) {
+      this.logger.warn(
+        `BUGSENSE_API_GATEWAY_URL is not configured; cannot look up alert recipients for project ${projectId} from the API gateway`,
+      );
+      return [];
+    }
+
     try {
       const response = await fetch(
         `${this.config.apiGatewayUrl}/projects/internal/${encodeURIComponent(

@@ -78,7 +78,10 @@ function parseUrlEnv(name: string, value: string) {
   try {
     return new URL(value).toString().replace(/\/$/, '');
   } catch {
-    throw new Error(`${name} must be a valid URL`);
+    throw new Error(
+      `${name} must be a valid URL, received "${value}". ` +
+        'Make sure it includes a scheme, e.g. https://api.example.com',
+    );
   }
 }
 
